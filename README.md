@@ -7,5 +7,5 @@ componenti archietturali
 - db: postgres
 
 avvio: 
-- docker compose
-- terminale(da togliere)
+- npm i 
+- ts-node bacaro-cli.ts
