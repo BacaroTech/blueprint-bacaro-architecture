@@ -1,0 +1,4 @@
+//DATABASE
+export const generateDatabase = () => {
+
+}

@@ -1,11 +1,18 @@
 # blueprint-bacaro-architecture
 
 componenti archietturali
-- fe: angular
-- libreria grafica: tailwind
-- be: node express
-- db: postgres
+- fe: angular ok
+- libreria grafica: 
+    - tailwind ko
+    - boostrap ok
+- be: 
+    node express ok
+    java spring-boot ko
+- db: 
+    - postgres ko
+    - mongo ko
+- docker-compose ko
 
 avvio: 
 - npm i 
-- ts-node bacaro-cli.ts
+- npm run build
