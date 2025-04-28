@@ -60,7 +60,7 @@ program
     fs.mkdirSync(frontendPath, { recursive: true });
     fs.mkdirSync(backendPath, { recursive: true });
 
-    // Generate Angular frontend with optional UI library
+    // Generate Angular frontend with optional UI library from .env file
     generateFeProject(projectNameFE, projectRoot, frontendPath, projectNameFromEnv);
 
     // Generate Database
