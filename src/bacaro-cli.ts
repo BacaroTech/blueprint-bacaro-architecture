@@ -64,13 +64,13 @@ program
     generateFeProject(projectNameFE, projectRoot, frontendPath, projectNameFromEnv);
 
     // Generate Database
-    generateDatabase()
+    generateDatabase(projectRoot, projectNameFromEnv.toLocaleLowerCase())
 
     // Generate Node.js backend
     generateBackendProject(projectNameBE, backendPath);
 
     // Generate Docker Compose file
-    generateDockerComposeFile(projectRoot, projectNameFromEnv.toLocaleLowerCase());
+    generateDockerComposeFile();
 
     console.log(`${projectNameFromEnv} setup complete!`);
   });

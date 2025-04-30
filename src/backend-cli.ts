@@ -7,6 +7,7 @@ dotenv.config();
 
 // load values from .env file
 const backendPort = process.env.BACKEND_PORT;
+const DBtype = process.env.DATABASE_TYPE;
 const DBPort = process.env.DATABASE_PORT;
 const DBUsr = process.env.DATABASE_USR;
 const DBPassword = process.env.DATABASE_PASSWORD;
