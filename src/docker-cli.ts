@@ -5,7 +5,7 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 //DOCKER COMPOSE
-export const generateDockerComposeFile = () => {
+export function generateDockerComposeFile(){
     
 }
   

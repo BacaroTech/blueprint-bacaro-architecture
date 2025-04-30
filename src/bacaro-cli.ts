@@ -1,6 +1,7 @@
 import { generateBackendProject } from "./backend-cli";
 import { generateDatabase } from "./database-cli";
 import { generateDockerComposeFile } from "./docker-cli";
+import { generateReadMe } from "./readme-cli";
 import { generateFeProject } from "./frontend-cli";
 
 const fs = require('fs');
@@ -11,10 +12,10 @@ const { program } = require('commander');
 dotenv.config();
 
 // load values from .env file
-const projectNameFromEnv = process.env.PROJECTNAME;
+const projectNameFromEnv = process.env.PROJECT_NAME;
 
 // Get the desktop path based on the OS
-const getDesktopPath = () => {
+function getDesktopPath(){
   if (process.platform === 'win32') {
     // On Windows, the Desktop folder is under USERPROFILE
     return path.join(process.env.USERPROFILE, 'Desktop');
@@ -50,10 +51,12 @@ program
     const frontendPath = path.join(projectRoot, projectNameFE);
     const backendPath = path.join(projectRoot, projectNameBE);
 
+    // Set project path
+    console.log("*********** SET PROJECT PATH *************")
     console.log(`Creating project: ${projectNameFromEnv}\n`);
-    console.log(`Project Root: ${projectRoot}`);
-    console.log(`Frontend Path: ${frontendPath}`);
-    console.log(`Backend Path: ${backendPath}`);
+    console.log(`Project Root: ${projectRoot}\n`);
+    console.log(`Frontend Path: ${frontendPath}\n`);
+    console.log(`Backend Path: ${backendPath}\n`);
 
     // Create project directories
     fs.mkdirSync(projectRoot, { recursive: true });
@@ -61,16 +64,19 @@ program
     fs.mkdirSync(backendPath, { recursive: true });
 
     // Generate Angular frontend with optional UI library from .env file
-    generateFeProject(projectNameFE, projectRoot, frontendPath, projectNameFromEnv);
+    generateFeProject(projectNameFE, projectRoot, frontendPath);
 
     // Generate Database
-    generateDatabase(projectRoot, projectNameFromEnv.toLocaleLowerCase())
+    generateDatabase(projectRoot)
 
     // Generate Node.js backend
     generateBackendProject(projectNameBE, backendPath);
 
     // Generate Docker Compose file
     generateDockerComposeFile();
+
+    // Generate README.md
+    generateReadMe(projectRoot);
 
     console.log(`${projectNameFromEnv} setup complete!`);
   });

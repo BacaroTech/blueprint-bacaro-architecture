@@ -1,0 +1,32 @@
+const fs = require('fs');
+const path = require('path');
+const dotenv = require('dotenv');
+
+dotenv.config();
+
+// load values from .env file
+const projectNameFromEnv = process.env.PROJECT_NAME;
+const projectDescription = process.env.PROJECT_DESCRIPTION
+const angularVersion = process.env.ANGULAR_VERSION
+
+export function generateReadMe(projectRoot: string){
+    const readmeContent = `
+# ${projectNameFromEnv}
+${projectDescription}
+
+## Documentazioni utili
+
+Angular: [Link alla documentazione](https://v${angularVersion}.angular.io/docs)
+
+Node express: [Link alla documentazione](https://nodejs.org/docs/latest/api/)
+
+Postgress: [Link alla documentazione](https://node-postgres.com/)
+
+---
+
+Questa repository è frutto della BacaroTech CLI
+
+Scopri di più su questa repo: [Link alla repo](https://github.com/BacaroTech/blueprint-bacaro-architecture)`;
+
+    fs.writeFileSync(path.join(projectRoot, 'README.md'), readmeContent);
+}

@@ -6,13 +6,14 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 // load values from .env file
-const uiLibraryFromEnv = process.env.UILIBRARY;
+const projectNameFromEnv = process.env.PROJECT_NAME;
+const uiLibraryFromEnv = process.env.UI_LIBRARY;
 const frontendPort = process.env.FRONTEND_PORT;
 const angularVersion = process.env.ANGULAR_VERSION;
 const backendPort = process.env.BACKEND_PORT;
 
 //TODO because not working
-const setTailwind = (frontendPath: string, projectNameFromEnv: string) => {
+function setTailwind(frontendPath: string){
   console.log('Installing and configuring Tailwind CSS...');
 
   // Step 1: Install Tailwind CSS and its dependencies
@@ -123,7 +124,7 @@ export class AppComponent implements OnInit {
   console.log('Tailwind CSS setup completed successfully!');
 };
 
-const setBootstrap = (frontendPath: string, projectNameFromEnv: string) => {
+function setBootstrap(frontendPath: string){
   console.log('Installing and configuring Bootstrap...');
 
   // Step 1: Install Bootstrap and its dependencies
@@ -242,23 +243,23 @@ export class AppModule { }
   console.log('Angular Bootstrap setup completed!');
 };
 
-const setFEinterfaceUI = (angularCommand: string, frontendPath: string, projectNameFromEnv: string) => {
-  // Check UILIBRARY value and modify the Angular CLI command
+function setFEinterfaceUI(angularCommand: string, frontendPath: string){
+  // Check UI_LIBRARY value and modify the Angular CLI command
   if (uiLibraryFromEnv === 'tailwind') {
     angularCommand += ' --package-manager npm'; // Add Tailwind CSS setup
     console.log('Adding Tailwind CSS to the Angular project...');
     //TODO FIX NOT WORK
-    setTailwind(frontendPath, projectNameFromEnv);
+    setTailwind(frontendPath);
   } else if (uiLibraryFromEnv === 'bootstrap') {
     angularCommand += ' --package-manager npm'; // Add Bootstrap setup
     console.log('Adding Bootstrap to the Angular project...');
-    setBootstrap(frontendPath, projectNameFromEnv);
+    setBootstrap(frontendPath);
   } else {
     console.log('No UI library selected. Skipping UI setup.');
   }
 };
 
-export const generateFeProject = (projectNameFE: string, projectRoot: string, frontendPath: string, projectNameFromEnv: string) => {
+export function generateFeProject(projectNameFE: string, projectRoot: string, frontendPath: string){
   console.log(`Generating Angular "${angularVersion}" project...\n`);
 
   // Angular CLI command to create a new project with specific version
@@ -266,7 +267,8 @@ export const generateFeProject = (projectNameFE: string, projectRoot: string, fr
     --directory "${projectNameFE}" \
     --style=scss \
     --routing \
-    --skip-install`; // Skip install to make it faster
+    --skip-git \
+    --skip-install`;
 
   // Execute the Angular CLI command
   execSync(angularCommand, { cwd: projectRoot, stdio: 'inherit' });
@@ -329,7 +331,7 @@ CMD ["nginx", "-g", "daemon off;"]`;
   fs.writeFileSync(path.join(frontendPath, 'nginx.conf'), nginxConfContent);
 
   // Rest of your existing code...
-  setFEinterfaceUI(angularCommand, frontendPath, projectNameFromEnv);
+  setFEinterfaceUI(angularCommand, frontendPath);
 
   const angularJsonPath = path.join(frontendPath, 'angular.json');
   const angularJson = JSON.parse(fs.readFileSync(angularJsonPath, 'utf8'));

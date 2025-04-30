@@ -1,5 +1,3 @@
-import { error } from "console";
-
 const fs = require('fs');
 const path = require('path');
 const dotenv = require('dotenv');
@@ -7,15 +5,15 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 // load values from .env file
+const projectNameFromEnv = (process.env.PROJECT_NAME)?.toLocaleLowerCase();
 const DBtype = process.env.DATABASE_TYPE;
 const DBPort = process.env.DATABASE_PORT;
 const DBUsr = process.env.DATABASE_USR;
 const DBPassword = process.env.DATABASE_PASSWORD;
 const DBName = process.env.DATABASE_NAME;
 
-
-function generatePostgress(projectRoot: string, projectNameFromEnv: string){
-const dockerComposeContent = `
+function generatePostgress(projectRoot: string){
+  const dockerComposeContent = `
 version: '3.8'
 
 services:
@@ -32,7 +30,7 @@ services:
       - ${projectNameFromEnv}-db-data:/var/lib/postgresql/data
     networks:
       - ${projectNameFromEnv}-network
-    restart: unless-stopped  # -> Added for automatic restart
+    restart: unless-stopped 
 
 volumes:
   ${projectNameFromEnv}-db-data:
@@ -41,23 +39,19 @@ networks:
   ${projectNameFromEnv}-network:
     driver: bridge
 `;
-    fs.writeFileSync(path.join(projectRoot, 'docker-compose.yml'), dockerComposeContent);
+  fs.writeFileSync(path.join(projectRoot, 'docker-compose.yml'), dockerComposeContent);
 }
 
-function generateMongo(projectRoot: string, projectNameFromEnv: string){
-    const dockerComposeContent = `
+function generateMongo(projectRoot: string){
+  const dockerComposeContent = `
 version: '3.8'
 
 services:
   ${projectNameFromEnv}db:
     container_name: ${projectNameFromEnv}db
-    image: mongo:6.0  # Using MongoDB 6.0 (latest stable as of 2023)
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: ${DBUsr}
-      MONGO_INITDB_ROOT_PASSWORD: ${DBPassword}
-      MONGO_INITDB_DATABASE: ${DBName}
+    image: mongo:6.0
     ports:
-      - "${DBPort}:${DBPort}"  # MongoDB default port is 27017
+      - "${DBPort}:${DBPort}"
     volumes:
       - ${projectNameFromEnv}-db-data:/data/db
     networks:
@@ -77,19 +71,19 @@ networks:
   ${projectNameFromEnv}-network:
     driver: bridge
 `;
-    fs.writeFileSync(path.join(projectRoot, 'docker-compose.yml'), dockerComposeContent);
+  fs.writeFileSync(path.join(projectRoot, 'docker-compose.yml'), dockerComposeContent);
 }
 
 //DATABASE
-export function generateDatabase(projectRoot: string, projectNameFromEnv: string){
-    switch(DBtype){
-        case "postgress": 
-            generatePostgress(projectRoot, projectNameFromEnv);
-            break;
-        case "mongo": 
-            generateMongo(projectRoot, projectNameFromEnv);
-            break;
-        default:
-            throw new Error("ERROR: Database type not found");
-    }
+export function generateDatabase(projectRoot: string){
+  switch(DBtype){
+    case "postgress": 
+      generatePostgress(projectRoot);
+      break;
+    case "mongo": 
+      generateMongo(projectRoot);
+      break;
+    default:
+      throw new Error("Database type not found");
+  }
 }
