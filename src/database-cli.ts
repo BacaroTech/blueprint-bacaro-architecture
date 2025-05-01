@@ -1,3 +1,5 @@
+import { BaseCLI } from "./base-cli";
+
 const fs = require('fs');
 const path = require('path');
 const dotenv = require('dotenv');
@@ -12,8 +14,16 @@ const DBUsr = process.env.DATABASE_USR;
 const DBPassword = process.env.DATABASE_PASSWORD;
 const DBName = process.env.DATABASE_NAME;
 
-function generatePostgress(projectRoot: string){
-  const dockerComposeContent = `
+export class DatabaseCLI extends BaseCLI{
+  private projectRoot: string = "";
+
+  public constructor(projectRoot: string){
+    super();
+    this.projectRoot = projectRoot;
+  }
+
+  private generatePostgress(){
+    const dockerComposeContent = `
 version: '3.8'
 
 services:
@@ -39,11 +49,11 @@ networks:
   ${projectNameFromEnv}-network:
     driver: bridge
 `;
-  fs.writeFileSync(path.join(projectRoot, 'docker-compose.yml'), dockerComposeContent);
-}
-
-function generateMongo(projectRoot: string){
-  const dockerComposeContent = `
+    fs.writeFileSync(path.join(this.projectRoot, 'docker-compose.yml'), dockerComposeContent);
+  }
+  
+  private generateMongo(){
+    const dockerComposeContent = `
 version: '3.8'
 
 services:
@@ -71,19 +81,20 @@ networks:
   ${projectNameFromEnv}-network:
     driver: bridge
 `;
-  fs.writeFileSync(path.join(projectRoot, 'docker-compose.yml'), dockerComposeContent);
-}
-
-//DATABASE
-export function generateDatabase(projectRoot: string){
-  switch(DBtype){
-    case "postgress": 
-      generatePostgress(projectRoot);
-      break;
-    case "mongo": 
-      generateMongo(projectRoot);
-      break;
-    default:
-      throw new Error("Database type not found");
+    fs.writeFileSync(path.join(this.projectRoot, 'docker-compose.yml'), dockerComposeContent);
+  }
+  
+  //DATABASE
+  public generate(){
+    switch(DBtype){
+      case "postgress": 
+        this.generatePostgress();
+        break;
+      case "mongo": 
+        this.generateMongo();
+        break;
+      default:
+        throw new Error("Database type not found");
+    }
   }
 }

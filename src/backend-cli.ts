@@ -1,3 +1,5 @@
+import { BaseCLI } from "./base-cli";
+
 const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
@@ -14,52 +16,61 @@ const DBPassword = process.env.DATABASE_PASSWORD;
 const DBName = process.env.DATABASE_NAME;
 const DBhost = process.env.DATABASE_HOST;
 
-//BE
-export function generateBackendProject(projectNameBE: string, backendPath: string){
-  console.log('Setting up Express backend with TypeScript...');
+export class BackendCLI extends BaseCLI{
+  projectNameBE: string = ""; 
+  backendPath: string = ""
 
-  // Initialize npm project
-  execSync(`npm init -y`, { 
-    cwd: backendPath, 
-    stdio: 'inherit' 
-  });
+  public constructor(projectNameBE: string, backendPath: string){
+    super();
+    this.projectNameBE = projectNameBE;
+    this.backendPath = backendPath;
+  }
 
-  // Install dependencies
-  execSync(`npm install express dotenv pg cors`, { 
-    cwd: backendPath, 
-    stdio: 'inherit' 
-  });
-
-  // Install dev dependencies
-  execSync(`npm install -D nodemon typescript ts-node @types/node @types/express @types/pg @types/cors`, { 
-    cwd: backendPath, 
-    stdio: 'inherit' 
-  });
-
-  // Initialize TypeScript configuration
-  execSync(`npx tsc --init`, { 
-    cwd: backendPath, 
-    stdio: 'inherit' 
-  });
-
-  // Install driver for connection DB
-  if(DBtype === "postgress"){
-    execSync(`npm install pg`, { 
-      cwd: backendPath, 
+  public generate(){
+    console.log('Setting up Express backend with TypeScript...');
+  
+    // Initialize npm project
+    execSync(`npm init -y`, { 
+      cwd: this.backendPath, 
       stdio: 'inherit' 
     });
-  }else{
-    //todo mongo configuration
-  }
-
-  // Create the src directory if it doesn't exist
-  const srcDir = path.join(backendPath, 'src');
-  if (!fs.existsSync(srcDir)) {
-    fs.mkdirSync(srcDir, { recursive: true });
-  }
-
-  // Create basic Express server with TypeScript
-  const serverCode = 
+  
+    // Install dependencies
+    execSync(`npm install express dotenv pg cors`, { 
+      cwd: this.backendPath, 
+      stdio: 'inherit' 
+    });
+  
+    // Install dev dependencies
+    execSync(`npm install -D nodemon typescript ts-node @types/node @types/express @types/pg @types/cors`, { 
+      cwd: this.backendPath, 
+      stdio: 'inherit' 
+    });
+  
+    // Initialize TypeScript configuration
+    execSync(`npx tsc --init`, { 
+      cwd: this.backendPath, 
+      stdio: 'inherit' 
+    });
+  
+    // Install driver for connection DB
+    if(DBtype === "postgress"){
+      execSync(`npm install pg`, { 
+        cwd: this.backendPath, 
+        stdio: 'inherit' 
+      });
+    }else{
+      //todo mongo configuration
+    }
+  
+    // Create the src directory if it doesn't exist
+    const srcDir = path.join(this.backendPath, 'src');
+    if (!fs.existsSync(srcDir)) {
+      fs.mkdirSync(srcDir, { recursive: true });
+    }
+  
+    // Create basic Express server with TypeScript
+    const serverCode = 
 `import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
@@ -136,10 +147,10 @@ process.on('SIGTERM', () => {
     });
 });`;
   
-  fs.writeFileSync(path.join(srcDir, 'index.ts'), serverCode);
-
-  // Generate Dockerfile
-  const dockerfileContent = `# Development stage with Nodemon
+    fs.writeFileSync(path.join(srcDir, 'index.ts'), serverCode);
+  
+    // Generate Dockerfile
+    const dockerfileContent = `
 FROM node:16.20.2-alpine
 
 WORKDIR /app
@@ -152,40 +163,40 @@ COPY . .
 
 EXPOSE ${backendPort}
 
-CMD ["npm", "run", "dev"]
-`;
-
-  // Write Docker files
-  fs.writeFileSync(path.join(backendPath, 'dockerfile'), dockerfileContent);
-
-  // Update package.json scripts
-  const packageJsonPath = path.join(backendPath, 'package.json');
-  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-  packageJson.scripts = {
-    "dev": "nodemon --exec ts-node src/index.ts",
-  };
-  fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
-
-  // Create environment files
+CMD ["npm", "run", "dev"]`;
   
-  fs.writeFileSync(path.join(backendPath, '.env'), 
+    // Write Docker files
+    fs.writeFileSync(path.join(this.backendPath, 'dockerfile'), dockerfileContent);
+  
+    // Update package.json scripts
+    const packageJsonPath = path.join(this.backendPath, 'package.json');
+    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+    packageJson.scripts = {
+      "dev": "nodemon --exec ts-node src/index.ts",
+    };
+    fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
+  
+    // Create environment files
+    
+    fs.writeFileSync(path.join(this.backendPath, '.env'), 
 `DATABASE_PORT=${DBPort}
 DATABASE_USR=${DBUsr}
 DATABASE_PASSWORD=${DBPassword}
 DATABASE_NAME=${DBName}
 DATABASE_HOST=${DBhost}
 BACKEND_PORT=${backendPort}`);
-
-  // Create README.md
-  fs.writeFileSync(path.join(backendPath, 'README.md'), 
-`# ${projectNameBE}
+  
+    // Create README.md
+    fs.writeFileSync(path.join(this.backendPath, 'README.md'), 
+`# ${this.projectNameBE}
 avvio: npm run dev`);
 
   // Create .gitignore
-  fs.writeFileSync(path.join(backendPath, '.gitignore'), 
-  `node_modules
+  fs.writeFileSync(path.join(this.backendPath, '.gitignore'), 
+`node_modules
 .env
 dist`);
 
   console.log('Express backend with TypeScript and Docker setup complete!');
-};
+  };
+}

@@ -1,3 +1,5 @@
+import { BaseCLI } from "./base-cli";
+
 const fs = require('fs');
 const path = require('path');
 const dotenv = require('dotenv');
@@ -9,8 +11,16 @@ const projectNameFromEnv = process.env.PROJECT_NAME;
 const projectDescription = process.env.PROJECT_DESCRIPTION
 const angularVersion = process.env.ANGULAR_VERSION
 
-export function generateReadMe(projectRoot: string){
-    const readmeContent = `
+export class ReadMeCLI extends BaseCLI{
+    projectRoot: string = "";
+
+    public constructor(projectRoot: string){
+        super();
+        this.projectRoot = projectRoot;
+    }
+
+    public generate(){
+        const readmeContent = `
 # ${projectNameFromEnv}
 ${projectDescription}
 
@@ -27,6 +37,8 @@ Postgress: [Link alla documentazione](https://node-postgres.com/)
 Questa repository è frutto della BacaroTech CLI
 
 Scopri di più su questa repo: [Link alla repo](https://github.com/BacaroTech/blueprint-bacaro-architecture)`;
-
-    fs.writeFileSync(path.join(projectRoot, 'README.md'), readmeContent);
+    
+        fs.writeFileSync(path.join(this.projectRoot, 'README.md'), readmeContent);
+    }
 }
+
