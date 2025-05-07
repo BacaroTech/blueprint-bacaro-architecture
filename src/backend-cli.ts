@@ -15,63 +15,44 @@ const DBUsr = process.env.DATABASE_USR;
 const DBPassword = process.env.DATABASE_PASSWORD;
 const DBName = process.env.DATABASE_NAME;
 const DBhost = process.env.DATABASE_HOST;
+const DBUri = process.env.DATABASE_URI;
 
 export class BackendCLI extends BaseCLI{
-  projectNameBE: string = ""; 
-  backendPath: string = ""
+  projectRoot: string = ""; 
+  backendPath: string = "";
+  projectNameBE: string = "";
 
-  public constructor(projectNameBE: string, backendPath: string){
+  public constructor(projectNameBE: string, projectRoot: string, backendPath: string){
     super();
     this.projectNameBE = projectNameBE;
+    this.projectRoot = projectRoot;
     this.backendPath = backendPath;
   }
 
-  public generate(){
-    console.log('Setting up Express backend with TypeScript...');
+  //generate folder structure
+  private generateFolder() {
+    const root = path.join(this.backendPath, 'src');
+    console.log('Target root:', root);
   
-    // Initialize npm project
-    execSync(`npm init -y`, { 
-      cwd: this.backendPath, 
-      stdio: 'inherit' 
-    });
-  
-    // Install dependencies
-    execSync(`npm install express dotenv pg cors`, { 
-      cwd: this.backendPath, 
-      stdio: 'inherit' 
-    });
-  
-    // Install dev dependencies
-    execSync(`npm install -D nodemon typescript ts-node @types/node @types/express @types/pg @types/cors`, { 
-      cwd: this.backendPath, 
-      stdio: 'inherit' 
-    });
-  
-    // Initialize TypeScript configuration
-    execSync(`npx tsc --init`, { 
-      cwd: this.backendPath, 
-      stdio: 'inherit' 
-    });
-  
-    // Install driver for connection DB
-    if(DBtype === "postgress"){
-      execSync(`npm install pg`, { 
-        cwd: this.backendPath, 
-        stdio: 'inherit' 
-      });
-    }else{
-      //todo mongo configuration
+    if (!fs.existsSync(root)) {
+      console.error('Target folder does not exist:', root);
+      return;
     }
   
-    // Create the src directory if it doesn't exist
-    const srcDir = path.join(this.backendPath, 'src');
-    if (!fs.existsSync(srcDir)) {
-      fs.mkdirSync(srcDir, { recursive: true });
-    }
+    const folders = ['config', 'database', 'routes', 'utils', 'middleware', 'models', 'controllers', 'helpers', 'views'];
   
-    // Create basic Express server with TypeScript
-    const serverCode = 
-`import express from 'express';
+    folders.forEach(folder => {
+      const folderPath = path.join(root, folder);
+      if (!fs.existsSync(folderPath)) {
+        fs.mkdirSync(folderPath, { recursive: true });
+        console.log('Created:', folderPath);
+      }
+    });
+  }
+
+  private getPostgresServer(): string {
+    return `
+import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import { Client } from 'pg';
@@ -85,11 +66,10 @@ const port = process.env.PORT || ${backendPort};
 const requiredEnvVars = ['DATABASE_PORT', 'DATABASE_USR', 'DATABASE_PASSWORD', 'DATABASE_NAME', 'DATABASE_HOST'];
 for (const envVar of requiredEnvVars) {
   if (!process.env[envVar]) {
-    throw new Error('Missing required environment variable');
+    throw new Error('Missing required environment variable: ' + envVar);
   }
 }
 
-// Create a new pool instead of single client
 const pool = new Client({
   user: process.env.DATABASE_USR,
   password: process.env.DATABASE_PASSWORD,
@@ -104,7 +84,6 @@ app.use(express.json());
 // Health check endpoint
 app.get('/', async (req, res) => {
   try {
-    // Test the connection
     await pool.query('SELECT NOW()');
     res.json({
       status: 'success',
@@ -121,11 +100,10 @@ app.get('/', async (req, res) => {
   }
 });
 
-// Start server
 pool.connect()
   .then(() => {
     app.listen(port, () => {
-      console.log('Server running on http://localhost:'+port);
+      console.log('Server running on http://localhost:' + port);
       console.log('Database connection established');
     });
   })
@@ -134,7 +112,6 @@ pool.connect()
     process.exit(1);
   });
 
-// Graceful shutdown
 process.on('SIGTERM', () => {
   pool.end()
     .then(() => {
@@ -145,58 +122,167 @@ process.on('SIGTERM', () => {
       console.error('Error closing database connection:', err);
       process.exit(1);
     });
-});`;
+});`.trim();
+  }
   
-    fs.writeFileSync(path.join(srcDir, 'index.ts'), serverCode);
+  private getMongoServer(): string {
+    return `
+import express from 'express';
+import dotenv from 'dotenv';
+import cors from 'cors';
+import mongoose from 'mongoose';
+
+dotenv.config();
+
+const app = express();
+const port = process.env.PORT || ${backendPort};
+
+// Validate required environment variables
+const requiredEnvVars = ['MONGO_URI'];
+for (const envVar of requiredEnvVars) {
+  if (!process.env[envVar]) {
+    throw new Error('Missing required environment variable: ' + envVar);
+  }
+}
+
+const mongoUri = process.env.MONGO_URI!;
+
+app.use(cors());
+app.use(express.json());
+
+// Example schema
+const userSchema = new mongoose.Schema({
+  name: String,
+  email: String
+});
+const User = mongoose.model('User', userSchema);
+
+// Health check endpoint
+app.get('/', async (req, res) => {
+  const dbState = mongoose.connection.readyState;
+  const status = ['disconnected', 'connected', 'connecting', 'disconnecting'][dbState];
+
+  res.json({
+    status: dbState === 1 ? 'success' : 'error',
+    message: 'Mongoose is ' + status,
+    timestamp: new Date().toISOString()
+  });
+});
+
+mongoose.connect(mongoUri)
+  .then(() => {
+    console.log('Connected to MongoDB with Mongoose');
+    app.listen(port, () => {
+      console.log('Server running on http://localhost:' + port);
+    });
+  })
+  .catch((err: Error) => {
+    console.error('Failed to connect to MongoDB:', err);
+    process.exit(1);
+  });
+
+process.on('SIGTERM', () => {
+  mongoose.connection.close()
+    .then(() => {
+      console.log('Mongoose connection closed');
+      process.exit(0);
+    })
+    .catch((err: Error) => {
+      console.error('Error closing Mongoose connection:', err);
+      process.exit(1);
+    });
+});`.trim();
+  }
   
-    // Generate Dockerfile
-    const dockerfileContent = `
-FROM node:16.20.2-alpine
 
-WORKDIR /app
-
-COPY package.json package-lock.json ./
-
-RUN npm install --include=dev
-
-COPY . .
-
-EXPOSE ${backendPort}
-
-CMD ["npm", "run", "dev"]`;
+  private getServerCode(): string {
+    return DBtype === 'mongo' ? this.getMongoServer() : this.getPostgresServer();
+  }
   
-    // Write Docker files
-    fs.writeFileSync(path.join(this.backendPath, 'dockerfile'), dockerfileContent);
-  
-    // Update package.json scripts
-    const packageJsonPath = path.join(this.backendPath, 'package.json');
-    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-    packageJson.scripts = {
-      "dev": "nodemon --exec ts-node src/index.ts",
-    };
-    fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
-  
-    // Create environment files
-    
-    fs.writeFileSync(path.join(this.backendPath, '.env'), 
+  private writeEnvFile() {
+    const content = DBtype === "Mongo" ? 
+`BACKEND_PORT=${backendPort}
+MONGO_URI=${DBUri}
+MONGO_DB_NAME=${DBName}`
+    : 
 `DATABASE_PORT=${DBPort}
 DATABASE_USR=${DBUsr}
 DATABASE_PASSWORD=${DBPassword}
 DATABASE_NAME=${DBName}
 DATABASE_HOST=${DBhost}
-BACKEND_PORT=${backendPort}`);
+BACKEND_PORT=${backendPort}`;
+    fs.writeFileSync(path.join(this.backendPath, '.env'), content);
+  }
   
-    // Create README.md
-    fs.writeFileSync(path.join(this.backendPath, 'README.md'), 
-`# ${this.projectNameBE}
-avvio: npm run dev`);
-
-  // Create .gitignore
-  fs.writeFileSync(path.join(this.backendPath, '.gitignore'), 
+  private writeReadme() {
+    fs.writeFileSync(path.join(this.backendPath, 'README.md'),
+`# ${this.projectRoot}
+Avvio locale: \`npm run dev\``);
+  }
+  
+  private writeGitignore() {
+    fs.writeFileSync(path.join(this.backendPath, '.gitignore'), 
 `node_modules
 .env
 dist`);
-
-  console.log('Express backend with TypeScript and Docker setup complete!');
-  };
+  }
+  
+  public generate() {
+    console.log('Setting up Express backend with TypeScript...');
+  
+    const backendCWD = this.backendPath;
+    const srcDir = path.join(backendCWD, 'src');
+  
+    // Init npm
+    execSync(`npm init -y`, { cwd: backendCWD, stdio: 'inherit' });
+  
+    // Base dependencies
+    execSync(`npm install express dotenv cors`, { cwd: backendCWD, stdio: 'inherit' });
+  
+    // Dev dependencies
+    execSync(`npm install -D nodemon typescript ts-node @types/node @types/express @types/cors`, {
+      cwd: backendCWD,
+      stdio: 'inherit'
+    });
+  
+    // Install DB driver
+    if (DBtype === 'postgress') {
+      execSync(`npm install pg @types/pg`, { cwd: backendCWD, stdio: 'inherit' });
+    } else if (DBtype === 'mongo') {
+      execSync(`npm install mongoose`, { cwd: backendCWD, stdio: 'inherit' });
+    }
+  
+    // Init TypeScript config
+    execSync(`npx tsc --init`, { cwd: backendCWD, stdio: 'inherit' });
+  
+    // Create src directory
+    if (!fs.existsSync(srcDir)) {
+      fs.mkdirSync(srcDir, { recursive: true });
+    }
+  
+    // Write main server file
+    const serverCode = this.getServerCode();
+    fs.writeFileSync(path.join(srcDir, 'index.ts'), serverCode);
+  
+    // Update package.json scripts
+    const packageJsonPath = path.join(backendCWD, 'package.json');
+    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+    packageJson.scripts = {
+      dev: 'nodemon --exec ts-node src/index.ts'
+    };
+    fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
+  
+    // Create .env file
+    this.writeEnvFile();
+  
+    // Create README and .gitignore
+    this.writeReadme();
+    this.writeGitignore();
+  
+    // Generate folders
+    this.generateFolder();
+  
+    console.log('Express backend with TypeScript and Docker setup complete!');
+  }
+  
 }

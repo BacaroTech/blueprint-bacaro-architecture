@@ -272,6 +272,27 @@ export class AppModule { }`;
     }
   };
 
+  //generate folder structure
+  private generateFolder() {
+    const root = path.join(this.projectRoot, this.projectNameFE, 'src', 'app');
+    console.log('Target root:', root);
+  
+    if (!fs.existsSync(root)) {
+      console.error('Target folder does not exist:', root);
+      return;
+    }
+  
+    const folders = ['components', 'services', 'models', 'guards', 'media', 'directives', 'pages'];
+  
+    folders.forEach(folder => {
+      const folderPath = path.join(root, folder);
+      if (!fs.existsSync(folderPath)) {
+        fs.mkdirSync(folderPath, { recursive: true });
+        console.log('Created:', folderPath);
+      }
+    });
+  }
+
   //Generete FE project 
   public generate(){
     console.log(`Generating Angular "${angularVersion}" project...\n`);
@@ -290,59 +311,9 @@ export class AppModule { }`;
     // Install dependencies explicitly (optional but recommended)
     const installCommand = `npm install @angular/core@${angularVersion} @angular/cli@${angularVersion} --legacy-peer-deps`;
     execSync(installCommand, { cwd: path.join(this.projectRoot, this.projectNameFE), stdio: 'inherit' });
-  
-    // Generate Dockerfile and Nginx config
-    const dockerfileContent = 
-`# Stage 1: Build Angular application
-FROM node:16.20.2-alpine AS builder
 
-WORKDIR /app
-
-COPY package.json package-lock.json ./
-
-RUN npm install
-
-COPY . .
-
-RUN npm run build -- --configuration=production
-
-# Stage 2: Serve with Nginx
-FROM nginx:1.25.3-alpine
-
-RUN rm -rf /etc/nginx/conf.d/default.conf
-
-COPY nginx.conf /etc/nginx/conf.d
-
-COPY --from=builder /app/dist/${this.projectNameFE} /usr/share/nginx/html
-
-EXPOSE 80
-
-CMD ["nginx", "-g", "daemon off;"]`;
-  
-    const nginxConfContent = 
-`server {
-  listen 80;
-  server_name localhost;
-
-  root /usr/share/nginx/html;
-  index index.html;
-
-  gzip on;
-  gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
-
-  location / {
-    try_files $uri $uri/ /index.html;
-  }
-
-  location ~* \\.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
-    expires 1y;
-    add_header Cache-Control "public, no-transform";
-  }
-}`;
-  
-    // Write Dockerfile and nginx.conf
-    fs.writeFileSync(path.join(this.frontendPath, 'dockerfile'), dockerfileContent);
-    fs.writeFileSync(path.join(this.frontendPath, 'nginx.conf'), nginxConfContent);
+    // Generate folder structure
+    this.generateFolder();
   
     // Rest of your existing code...
     this.setFEinterfaceUI();

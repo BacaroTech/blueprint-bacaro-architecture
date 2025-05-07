@@ -74,7 +74,7 @@ class BacaroCLI{
         databaseCLI.generate();
 
         // Generate Backend
-        const backendCLI: BackendCLI = new BackendCLI(projectRoot, backendPath);
+        const backendCLI: BackendCLI = new BackendCLI(projectNameBE, projectRoot, backendPath);
         backendCLI.generate();
 
         // Generate Docker Compose file
