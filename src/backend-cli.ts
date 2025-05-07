@@ -8,7 +8,7 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 // load values from .env file
-const backendPort = process.env.BACKEND_PORT;
+const BackendPort = process.env.BACKEND_PORT;
 const DBtype = process.env.DATABASE_TYPE;
 const DBPort = process.env.DATABASE_PORT;
 const DBUsr = process.env.DATABASE_USR;
@@ -56,11 +56,13 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import { Client } from 'pg';
+import swaggerUi from 'swagger-ui-express';
+import swaggerJsDoc from 'swagger-jsdoc';
 
 dotenv.config();
 
 const app = express();
-const port = process.env.PORT || ${backendPort};
+const port = process.env.PORT || ${BackendPort};
 
 // Validate required environment variables
 const requiredEnvVars = ['DATABASE_PORT', 'DATABASE_USR', 'DATABASE_PASSWORD', 'DATABASE_NAME', 'DATABASE_HOST'];
@@ -81,7 +83,36 @@ const pool = new Client({
 app.use(cors());
 app.use(express.json());
 
-// Health check endpoint
+// Swagger setup
+const swaggerOptions = {
+  swaggerDefinition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'API Documentation',
+      version: '1.0.0',
+      description: 'Auto-generated Swagger docs',
+    },
+    servers: [
+      {
+        url: 'http://localhost:' + port
+      }
+    ]
+  },
+  apis: ['./src/routes/*.ts', './src/index.ts'],
+};
+
+const swaggerDocs = swaggerJsDoc(swaggerOptions);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+
+/**
+ * @openapi
+ * /:
+ *   get:
+ *     summary: Health check
+ *     responses:
+ *       200:
+ *         description: Success response
+ */
 app.get('/', async (req, res) => {
   try {
     await pool.query('SELECT NOW()');
@@ -104,6 +135,7 @@ pool.connect()
   .then(() => {
     app.listen(port, () => {
       console.log('Server running on http://localhost:' + port);
+      console.log('Swagger docs available at http://localhost:' + port + '/api-docs');
       console.log('Database connection established');
     });
   })
@@ -125,17 +157,20 @@ process.on('SIGTERM', () => {
 });`.trim();
   }
   
+  
   private getMongoServer(): string {
     return `
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import mongoose from 'mongoose';
+import swaggerUi from 'swagger-ui-express';
+import swaggerJsDoc from 'swagger-jsdoc';
 
 dotenv.config();
 
 const app = express();
-const port = process.env.PORT || ${backendPort};
+const port = process.env.PORT || ${BackendPort};
 
 // Validate required environment variables
 const requiredEnvVars = ['MONGO_URI'];
@@ -146,9 +181,29 @@ for (const envVar of requiredEnvVars) {
 }
 
 const mongoUri = process.env.MONGO_URI!;
-
 app.use(cors());
 app.use(express.json());
+
+// Swagger setup
+const swaggerOptions = {
+  swaggerDefinition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'API Documentation',
+      version: '1.0.0',
+      description: 'Auto-generated Swagger docs',
+    },
+    servers: [
+      {
+        url: 'http://localhost:' + port
+      }
+    ]
+  },
+  apis: ['./src/routes/*.ts', './src/index.ts'],
+};
+
+const swaggerDocs = swaggerJsDoc(swaggerOptions);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 // Example schema
 const userSchema = new mongoose.Schema({
@@ -157,7 +212,15 @@ const userSchema = new mongoose.Schema({
 });
 const User = mongoose.model('User', userSchema);
 
-// Health check endpoint
+/**
+ * @openapi
+ * /:
+ *   get:
+ *     summary: Health check
+ *     responses:
+ *       200:
+ *         description: Mongoose status
+ */
 app.get('/', async (req, res) => {
   const dbState = mongoose.connection.readyState;
   const status = ['disconnected', 'connected', 'connecting', 'disconnecting'][dbState];
@@ -174,6 +237,7 @@ mongoose.connect(mongoUri)
     console.log('Connected to MongoDB with Mongoose');
     app.listen(port, () => {
       console.log('Server running on http://localhost:' + port);
+      console.log('Swagger docs available at http://localhost:' + port + '/api-docs');
     });
   })
   .catch((err: Error) => {
@@ -194,14 +258,13 @@ process.on('SIGTERM', () => {
 });`.trim();
   }
   
-
   private getServerCode(): string {
     return DBtype === 'mongo' ? this.getMongoServer() : this.getPostgresServer();
   }
   
   private writeEnvFile() {
     const content = DBtype === "Mongo" ? 
-`BACKEND_PORT=${backendPort}
+`BACKEND_PORT=${BackendPort}
 MONGO_URI=${DBUri}
 MONGO_DB_NAME=${DBName}`
     : 
@@ -210,7 +273,7 @@ DATABASE_USR=${DBUsr}
 DATABASE_PASSWORD=${DBPassword}
 DATABASE_NAME=${DBName}
 DATABASE_HOST=${DBhost}
-BACKEND_PORT=${backendPort}`;
+BACKEND_PORT=${BackendPort}`;
     fs.writeFileSync(path.join(this.backendPath, '.env'), content);
   }
   
@@ -255,10 +318,29 @@ dist`);
     // Init TypeScript config
     execSync(`npx tsc --init`, { cwd: backendCWD, stdio: 'inherit' });
   
+    // Swagger dependencies
+    execSync(`npm install swagger-ui-express`, { cwd: backendCWD, stdio: 'inherit' });
+    execSync(`npm install swagger-jsdoc`, { cwd: backendCWD, stdio: 'inherit' });
+    execSync(`npm i --save-dev @types/swagger-jsdoc`, { cwd: backendCWD, stdio: 'inherit' });
+    
+    execSync(`npm install -D @types/swagger-ui-express`, { cwd: backendCWD, stdio: 'inherit' });
+  
     // Create src directory
     if (!fs.existsSync(srcDir)) {
       fs.mkdirSync(srcDir, { recursive: true });
     }
+  
+    // Create src/types and write swagger-jsdoc.d.ts
+    const typesDir = path.join(srcDir, 'types');
+    if (!fs.existsSync(typesDir)) {
+      fs.mkdirSync(typesDir, { recursive: true });
+    }
+    const typeDeclaration = `declare module 'swagger-jsdoc' {
+    const swaggerJsDoc: any;
+    export default swaggerJsDoc;
+  }
+  `;
+    fs.writeFileSync(path.join(typesDir, 'swagger-jsdoc.d.ts'), typeDeclaration);
   
     // Write main server file
     const serverCode = this.getServerCode();

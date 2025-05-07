@@ -67,7 +67,7 @@ class BacaroCLI{
 
         // Generate Frontend
         const frontendCLI: FrontendCLI = new FrontendCLI(projectNameFE, projectRoot, frontendPath);
-        frontendCLI.generate();
+        //frontendCLI.generate();
 
         // Generate Database
         const databaseCLI: DatabaseCLI = new DatabaseCLI(projectRoot);
