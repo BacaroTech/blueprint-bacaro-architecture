@@ -8,6 +8,7 @@ const fs = require('fs');
 const path = require('path');
 const dotenv = require('dotenv');
 const { program } = require('commander');
+const logger = require('winston');
 
 dotenv.config();
 
@@ -31,7 +32,7 @@ class BacaroCLI{
       .version('1.0.0')
       .action(() => {
         if (!projectNameFromEnv) {
-          console.error('Project name is required! Set it in the .env file or as a command-line argument.');
+          logger.error('Project name is required! Set it in the .env file or as a command-line argument.');
           process.exit(1);
         }
 
@@ -44,9 +45,9 @@ class BacaroCLI{
 
         // Check if folder exists and delete it
         if (fs.existsSync(projectRoot)) {
-          console.log(`Found existing project folder at ${projectRoot}. Deleting it...`);
+          logger.info(`Found existing project folder at ${projectRoot}. Deleting it...`);
           fs.rmSync(projectRoot, { recursive: true, force: true });
-          console.log('Existing project folder deleted.');
+          logger.info('Existing project folder deleted.');
         }
 
         // Set the project name for FE and BE
@@ -54,11 +55,11 @@ class BacaroCLI{
         const backendPath = path.join(projectRoot, projectNameBE);
 
         // Set project path
-        console.log("*********** SET PROJECT PATH *************")
-        console.log(`Creating project: ${projectNameFromEnv}`);
-        console.log(`Project Root: ${projectRoot}`);
-        console.log(`Frontend Path: ${frontendPath}`);
-        console.log(`Backend Path: ${backendPath}`);
+        logger.info("*********** SET PROJECT PATH *************")
+        logger.info(`Creating project: ${projectNameFromEnv}`);
+        logger.info(`Project Root: ${projectRoot}`);
+        logger.info(`Frontend Path: ${frontendPath}`);
+        logger.info(`Backend Path: ${backendPath}`);
 
         // Create project directories
         fs.mkdirSync(projectRoot, { recursive: true });
@@ -67,7 +68,7 @@ class BacaroCLI{
 
         // Generate Frontend
         const frontendCLI: FrontendCLI = new FrontendCLI(projectNameFE, projectRoot, frontendPath);
-        //frontendCLI.generate();
+        frontendCLI.generate();
 
         // Generate Database
         const databaseCLI: DatabaseCLI = new DatabaseCLI(projectRoot);
@@ -85,7 +86,7 @@ class BacaroCLI{
         const readMeCLI: ReadMeCLI = new ReadMeCLI(projectRoot);
         readMeCLI.generate();
 
-        console.log(`${projectNameFromEnv} setup complete!`);
+        logger.info(`${projectNameFromEnv} setup complete!`);
       });
 
     program.parse();

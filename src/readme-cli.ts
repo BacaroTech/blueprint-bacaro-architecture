@@ -3,6 +3,7 @@ import { BaseCLI } from "./base-cli";
 const fs = require('fs');
 const path = require('path');
 const dotenv = require('dotenv');
+const logger = require('winston');
 
 dotenv.config();
 
@@ -39,6 +40,7 @@ Questa repository è frutto della BacaroTech CLI
 Scopri di più su questa repo: [Link alla repo](https://github.com/BacaroTech/blueprint-bacaro-architecture)`;
     
         fs.writeFileSync(path.join(this.projectRoot, 'README.md'), readmeContent);
+        logger.info("ReadMe genereted");
     }
 }
 

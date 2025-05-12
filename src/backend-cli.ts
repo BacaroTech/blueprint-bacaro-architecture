@@ -4,11 +4,13 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const dotenv = require('dotenv');
+const logger = require('winston');
 
 dotenv.config();
 
 // load values from .env file
 const BackendPort = process.env.BACKEND_PORT;
+const LogLevel = process.env.LOG_LEVEL;
 const DBtype = process.env.DATABASE_TYPE;
 const DBPort = process.env.DATABASE_PORT;
 const DBUsr = process.env.DATABASE_USR;
@@ -32,10 +34,10 @@ export class BackendCLI extends BaseCLI{
   //generate folder structure
   private generateFolder() {
     const root = path.join(this.backendPath, 'src');
-    console.log('Target root:', root);
+    logger.info('Target root:', root);
   
     if (!fs.existsSync(root)) {
-      console.error('Target folder does not exist:', root);
+      logger.error('Target folder does not exist:', root);
       return;
     }
   
@@ -45,9 +47,55 @@ export class BackendCLI extends BaseCLI{
       const folderPath = path.join(root, folder);
       if (!fs.existsSync(folderPath)) {
         fs.mkdirSync(folderPath, { recursive: true });
-        console.log('Created:', folderPath);
+        logger.info('Created:', folderPath);
       }
     });
+  }
+
+  private getLoggerConfig(): string {
+    return `
+// src/config/logger.ts
+import winston from 'winston';
+import path from 'path';
+
+const { combine, timestamp, printf, colorize, align } = winston.format;
+
+const logger = winston.createLogger({
+  level: process.env.LOG_LEVEL || 'info',
+  format: combine(
+    colorize({ all: true }),
+    timestamp({
+      format: 'YYYY-MM-DD hh:mm:ss.SSS A',
+    }),
+    align(),
+    printf((info) => \`[\${info.timestamp}] \${info.level}: \${info.message}\`)
+  ),
+  transports: [
+    new winston.transports.Console(),
+    new winston.transports.File({
+      filename: path.join(__dirname, '../../logs/error.log'),
+      level: 'error',
+    }),
+    new winston.transports.File({
+      filename: path.join(__dirname, '../../logs/combined.log'),
+    }),
+  ],
+  exceptionHandlers: [
+    new winston.transports.File({
+      filename: path.join(__dirname, '../../logs/exceptions.log'),
+    }),
+  ],
+});
+
+// Morgan stream for HTTP request logging
+const morganStream = {
+  write: (message: string) => {
+    logger.info(message.trim());
+  },
+};
+
+export { logger, morganStream };
+`.trim();
   }
 
   private getPostgresServer(): string {
@@ -58,6 +106,8 @@ import cors from 'cors';
 import { Client } from 'pg';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsDoc from 'swagger-jsdoc';
+import morgan from 'morgan';
+import { logger, morganStream } from './config/logger';
 
 dotenv.config();
 
@@ -68,6 +118,7 @@ const port = process.env.PORT || ${BackendPort};
 const requiredEnvVars = ['DATABASE_PORT', 'DATABASE_USR', 'DATABASE_PASSWORD', 'DATABASE_NAME', 'DATABASE_HOST'];
 for (const envVar of requiredEnvVars) {
   if (!process.env[envVar]) {
+    logger.error('Missing required environment variable: ' + envVar);
     throw new Error('Missing required environment variable: ' + envVar);
   }
 }
@@ -82,6 +133,9 @@ const pool = new Client({
 
 app.use(cors());
 app.use(express.json());
+
+// HTTP request logging
+app.use(morgan('combined', { stream: morganStream }));
 
 // Swagger setup
 const swaggerOptions = {
@@ -116,13 +170,14 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 app.get('/', async (req, res) => {
   try {
     await pool.query('SELECT NOW()');
+    logger.info('Successfully connected to PostgreSQL database');
     res.json({
       status: 'success',
       message: 'Connected to PostgreSQL database',
       timestamp: new Date().toISOString()
     });
   } catch (err: any) {
-    console.error('Database connection error:', err);
+    logger.error('Database connection error:', err);
     res.status(503).json({
       status: 'error',
       message: 'Database connection failed',
@@ -134,29 +189,38 @@ app.get('/', async (req, res) => {
 pool.connect()
   .then(() => {
     app.listen(port, () => {
-      console.log('Server running on http://localhost:' + port);
-      console.log('Swagger docs available at http://localhost:' + port + '/api-docs');
-      console.log('Database connection established');
+      logger.info('Server running on http://localhost:' + port);
+      logger.info('Swagger docs available at http://localhost:' + port + '/api-docs');
+      logger.info('Database connection established');
     });
   })
   .catch((err: Error) => {
-    console.error('Failed to connect to database:', err);
+    logger.error('Failed to connect to database:', err);
     process.exit(1);
   });
 
 process.on('SIGTERM', () => {
   pool.end()
     .then(() => {
-      console.log('Database connection closed');
+      logger.info('Database connection closed');
       process.exit(0);
     })
     .catch((err: Error) => {
-      console.error('Error closing database connection:', err);
+      logger.error('Error closing database connection:', err);
       process.exit(1);
     });
-});`.trim();
+});
+
+process.on('unhandledRejection', (err: Error) => {
+  logger.error('Unhandled rejection:', err);
+});
+
+process.on('uncaughtException', (err: Error) => {
+  logger.error('Uncaught exception:', err);
+  process.exit(1);
+});
+`.trim();
   }
-  
   
   private getMongoServer(): string {
     return `
@@ -166,6 +230,8 @@ import cors from 'cors';
 import mongoose from 'mongoose';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsDoc from 'swagger-jsdoc';
+import morgan from 'morgan';
+import { logger, morganStream } from './config/logger';
 
 dotenv.config();
 
@@ -176,6 +242,7 @@ const port = process.env.PORT || ${BackendPort};
 const requiredEnvVars = ['MONGO_URI'];
 for (const envVar of requiredEnvVars) {
   if (!process.env[envVar]) {
+    logger.error('Missing required environment variable: ' + envVar);
     throw new Error('Missing required environment variable: ' + envVar);
   }
 }
@@ -183,6 +250,9 @@ for (const envVar of requiredEnvVars) {
 const mongoUri = process.env.MONGO_URI!;
 app.use(cors());
 app.use(express.json());
+
+// HTTP request logging
+app.use(morgan('combined', { stream: morganStream }));
 
 // Swagger setup
 const swaggerOptions = {
@@ -225,6 +295,8 @@ app.get('/', async (req, res) => {
   const dbState = mongoose.connection.readyState;
   const status = ['disconnected', 'connected', 'connecting', 'disconnecting'][dbState];
 
+  logger.info(\`Mongoose connection status: \${status}\`);
+  
   res.json({
     status: dbState === 1 ? 'success' : 'error',
     message: 'Mongoose is ' + status,
@@ -234,28 +306,38 @@ app.get('/', async (req, res) => {
 
 mongoose.connect(mongoUri)
   .then(() => {
-    console.log('Connected to MongoDB with Mongoose');
+    logger.info('Connected to MongoDB with Mongoose');
     app.listen(port, () => {
-      console.log('Server running on http://localhost:' + port);
-      console.log('Swagger docs available at http://localhost:' + port + '/api-docs');
+      logger.info('Server running on http://localhost:' + port);
+      logger.info('Swagger docs available at http://localhost:' + port + '/api-docs');
     });
   })
   .catch((err: Error) => {
-    console.error('Failed to connect to MongoDB:', err);
+    logger.error('Failed to connect to MongoDB:', err);
     process.exit(1);
   });
 
 process.on('SIGTERM', () => {
   mongoose.connection.close()
     .then(() => {
-      console.log('Mongoose connection closed');
+      logger.info('Mongoose connection closed');
       process.exit(0);
     })
     .catch((err: Error) => {
-      console.error('Error closing Mongoose connection:', err);
+      logger.error('Error closing Mongoose connection:', err);
       process.exit(1);
     });
-});`.trim();
+});
+
+process.on('unhandledRejection', (err: Error) => {
+  logger.error('Unhandled rejection:', err);
+});
+
+process.on('uncaughtException', (err: Error) => {
+  logger.error('Uncaught exception:', err);
+  process.exit(1);
+});
+`.trim();
   }
   
   private getServerCode(): string {
@@ -263,35 +345,49 @@ process.on('SIGTERM', () => {
   }
   
   private writeEnvFile() {
-    const content = DBtype === "Mongo" ? 
-`BACKEND_PORT=${BackendPort}
-MONGO_URI=${DBUri}
+    //load configuration for database
+    let content: string = DBtype === "Mongo" ? 
+`MONGO_URI=${DBUri}
 MONGO_DB_NAME=${DBName}`
     : 
 `DATABASE_PORT=${DBPort}
 DATABASE_USR=${DBUsr}
 DATABASE_PASSWORD=${DBPassword}
 DATABASE_NAME=${DBName}
-DATABASE_HOST=${DBhost}
-BACKEND_PORT=${BackendPort}`;
+DATABASE_HOST=${DBhost}`;
+
+    //common configuration
+    content += 
+`\nBACKEND_PORT=${BackendPort}
+LOG_LEVEL=${LogLevel}`;
+
     fs.writeFileSync(path.join(this.backendPath, '.env'), content);
   }
   
   private writeReadme() {
     fs.writeFileSync(path.join(this.backendPath, 'README.md'),
 `# ${this.projectRoot}
-Avvio locale: \`npm run dev\``);
+Avvio locale: \`npm run dev\`
+
+## Logging
+Logs are stored in the \`logs\` directory with the following files:
+- \`error.log\`: Only error logs
+- \`combined.log\`: All logs
+- \`exceptions.log\`: Uncaught exceptions
+
+Log level can be configured via the \`LOG_LEVEL\` environment variable (debug, info, warn, error)`);
   }
   
   private writeGitignore() {
     fs.writeFileSync(path.join(this.backendPath, '.gitignore'), 
 `node_modules
 .env
-dist`);
+dist
+logs`);
   }
   
   public generate() {
-    console.log('Setting up Express backend with TypeScript...');
+    logger.info('Setting up Express backend with TypeScript...');
   
     const backendCWD = this.backendPath;
     const srcDir = path.join(backendCWD, 'src');
@@ -300,10 +396,10 @@ dist`);
     execSync(`npm init -y`, { cwd: backendCWD, stdio: 'inherit' });
   
     // Base dependencies
-    execSync(`npm install express dotenv cors`, { cwd: backendCWD, stdio: 'inherit' });
+    execSync(`npm install express dotenv cors morgan winston`, { cwd: backendCWD, stdio: 'inherit' });
   
     // Dev dependencies
-    execSync(`npm install -D nodemon typescript ts-node @types/node @types/express @types/cors`, {
+    execSync(`npm install -D nodemon typescript ts-node @types/node @types/express @types/cors @types/morgan @types/winston`, {
       cwd: backendCWD,
       stdio: 'inherit'
     });
@@ -322,7 +418,6 @@ dist`);
     execSync(`npm install swagger-ui-express`, { cwd: backendCWD, stdio: 'inherit' });
     execSync(`npm install swagger-jsdoc`, { cwd: backendCWD, stdio: 'inherit' });
     execSync(`npm i --save-dev @types/swagger-jsdoc`, { cwd: backendCWD, stdio: 'inherit' });
-    
     execSync(`npm install -D @types/swagger-ui-express`, { cwd: backendCWD, stdio: 'inherit' });
   
     // Create src directory
@@ -341,6 +436,20 @@ dist`);
   }
   `;
     fs.writeFileSync(path.join(typesDir, 'swagger-jsdoc.d.ts'), typeDeclaration);
+  
+    // Create logs directory
+    const logsDir = path.join(backendCWD, 'logs');
+    if (!fs.existsSync(logsDir)) {
+      fs.mkdirSync(logsDir, { recursive: true });
+    }
+  
+    // Write logger configuration
+    const loggerConfig = this.getLoggerConfig();
+    const configDir = path.join(srcDir, 'config');
+    if (!fs.existsSync(configDir)) {
+      fs.mkdirSync(configDir, { recursive: true });
+    }
+    fs.writeFileSync(path.join(configDir, 'logger.ts'), loggerConfig);
   
     // Write main server file
     const serverCode = this.getServerCode();
@@ -364,7 +473,6 @@ dist`);
     // Generate folders
     this.generateFolder();
   
-    console.log('Express backend with TypeScript and Docker setup complete!');
+    logger.info('Express backend with TypeScript and Winston logging setup complete!');
   }
-  
 }
