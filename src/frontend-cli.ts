@@ -100,6 +100,9 @@ export class AppComponent implements OnInit {
   }
 }`.trim();
     fs.writeFileSync(appComponentPath, appComponentContent);
+
+//    const dotEnvFile = path.join(this.frontendPath);
+//    fs.writeFileSync(this.frontendPath, dotEnvFile);
   }
 
   private updateAppModule(): void {
@@ -417,14 +420,16 @@ module.exports = {
     // Generate folder structure
     this.generateFolder();
   
-    // Set up
     this.updateEnvironmentFiles();
+    
     this.updateAppComponent();
+    
     this.updateAppModule();
+    
     this.setupErrorHandler();
+
     this.setupHttpInterceptor();
-  
-    // Rest of your existing code...
+    
     this.setFEinterfaceUI();
   
     const angularJsonPath = path.join(this.frontendPath, 'angular.json');

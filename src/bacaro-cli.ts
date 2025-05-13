@@ -72,14 +72,14 @@ class BacaroCLI{
 
         // Generate Database
         const databaseCLI: DatabaseCLI = new DatabaseCLI(projectRoot);
-        databaseCLI.generate();
+        //databaseCLI.generate();
 
         // Generate Backend
         const backendCLI: BackendCLI = new BackendCLI(projectNameBE, projectRoot, backendPath);
         backendCLI.generate();
 
         // Generate Docker Compose file
-        const dockerCLI: DockerCLI = new DockerCLI();
+        const dockerCLI: DockerCLI = new DockerCLI(projectRoot);
         dockerCLI.generate();
 
         // Generate README.md
