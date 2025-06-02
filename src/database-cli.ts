@@ -1,74 +1,83 @@
 import { BaseCLI } from "./base-cli";
-
-const fs = require('fs');
-const path = require('path');
-const dotenv = require('dotenv');
-const logger = require('winston');
+import fs from "fs";
+import path from "path";
+import dotenv from "dotenv";
+import logger from "winston";
 
 dotenv.config();
 
-// load values from .env file
-const projectNameFromEnv = (process.env.PROJECT_NAME)?.toLocaleLowerCase();
-const DBtype = process.env.DATABASE_TYPE;
-const DBPort = process.env.DATABASE_PORT;
-const DBUsr = process.env.DATABASE_USR;
-const DBPassword = process.env.DATABASE_PASSWORD;
-const DBName = process.env.DATABASE_NAME;
+export class DatabaseCLI extends BaseCLI {
+  private projectRoot: string;
 
-export class DatabaseCLI extends BaseCLI{
-  private projectRoot: string = "";
+  private projectName: string;
+  private dbType: string;
+  private dbPort: string;
+  private dbUser?: string;
+  private dbPassword?: string;
+  private dbName?: string;
 
-  public constructor(projectRoot: string){
+  constructor(projectRoot: string) {
     super();
     this.projectRoot = projectRoot;
+
+    // load values from .env file
+    this.projectName = process.env.PROJECT_NAME?.toLowerCase() ?? "project";
+    this.dbType = process.env.DATABASE_TYPE ?? "";
+    this.dbPort = process.env.DATABASE_PORT ?? "";
+    this.dbUser = process.env.DATABASE_USR;
+    this.dbPassword = process.env.DATABASE_PASSWORD;
+    this.dbName = process.env.DATABASE_NAME;
   }
 
-  private generatePostgress(){
-    const dockerComposeContent = `
-version: '3.8'
+  private generatePostgress(): void {
+    const content = `version: '3.8'
 
 services:
-  ${projectNameFromEnv}db:
-    container_name: ${projectNameFromEnv}db
+  ${this.projectName}db:
+    container_name: ${this.projectName}db
     image: postgres:13
     environment:
-      POSTGRES_PASSWORD: ${DBPassword}
-      POSTGRES_USER: ${DBUsr}
-      POSTGRES_DB: ${DBName}
+      POSTGRES_PASSWORD: ${this.dbPassword}
+      POSTGRES_USER: ${this.dbUser}
+      POSTGRES_DB: ${this.dbName}
     ports:
-      - "${DBPort}:${DBPort}"
+      - "${this.dbPort}:5432"
     volumes:
-      - ${projectNameFromEnv}-db-data:/var/lib/postgresql/data
+      - ${this.projectName}-db-data:/var/lib/postgresql/data
     networks:
-      - ${projectNameFromEnv}-network
+      - ${this.projectName}-network
     restart: unless-stopped 
 
 volumes:
-  ${projectNameFromEnv}-db-data:
+  ${this.projectName}-db-data:
 
 networks:
-  ${projectNameFromEnv}-network:
+  ${this.projectName}-network:
     driver: bridge
 `;
-    fs.writeFileSync(path.join(this.projectRoot, 'docker-compose.yml'), dockerComposeContent);
+
+    try {
+      fs.writeFileSync(path.join(this.projectRoot, "docker-compose.yml"), content, "utf-8");
+      logger.info("Postgres docker-compose.yml generated");
+    } catch (error) {
+      logger.error("Failed to generate Postgres docker-compose.yml", error);
+    }
   }
-  
-  private generateMongo(){
-    const dockerComposeContent = `
-version: '3.8'
+
+  private generateMongo(): void {
+    const content = `version: '3.8'
 
 services:
-  ${projectNameFromEnv}db:
-    container_name: ${projectNameFromEnv}db
+  ${this.projectName}db:
+    container_name: ${this.projectName}db
     image: mongo:6.0
     ports:
-      - "${DBPort}:${DBPort}"
+      - "${this.dbPort}:27017"
     volumes:
-      - ${projectNameFromEnv}-db-data:/data/db
+      - ${this.projectName}-db-data:/data/db
     networks:
-      - ${projectNameFromEnv}-network
+      - ${this.projectName}-network
     restart: unless-stopped
-    # Optional health check for MongoDB
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
@@ -76,26 +85,31 @@ services:
       retries: 5
 
 volumes:
-  ${projectNameFromEnv}-db-data:
+  ${this.projectName}-db-data:
 
 networks:
-  ${projectNameFromEnv}-network:
+  ${this.projectName}-network:
     driver: bridge
 `;
-    fs.writeFileSync(path.join(this.projectRoot, 'docker-compose.yml'), dockerComposeContent);
+
+    try {
+      fs.writeFileSync(path.join(this.projectRoot, "docker-compose.yml"), content, "utf-8");
+      logger.info("Mongo docker-compose.yml generated");
+    } catch (error) {
+      logger.error("Failed to generate Mongo docker-compose.yml", error);
+    }
   }
-  
-  //DATABASE
-  public generate(){
-    switch(DBtype){
-      case "postgress": 
+
+  public generate(): void {
+    switch (this.dbType.toLowerCase()) {
+      case "postgres":
         this.generatePostgress();
         break;
-      case "mongo": 
+      case "mongo":
         this.generateMongo();
         break;
       default:
-        throw new Error("Database type not found");
+        throw new Error(`Database type "${this.dbType}" not supported.`);
     }
   }
 }

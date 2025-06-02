@@ -4,94 +4,99 @@ import { DockerCLI } from "./docker-cli";
 import { FrontendCLI } from "./frontend-cli";
 import { ReadMeCLI } from "./readme-cli";
 
-const fs = require('fs');
-const path = require('path');
-const dotenv = require('dotenv');
-const { program } = require('commander');
-const logger = require('winston');
+import fs from 'fs';
+import path from 'path';
+import dotenv from 'dotenv';
+import { program } from 'commander';
+import logger from 'winston';
 
 dotenv.config();
 
-// load values from .env file
-const projectNameFromEnv = process.env.PROJECT_NAME;
+class BacaroCLI {
+  private PROJECT_NAME: string;
 
-class BacaroCLI{
-  // Get the desktop path based on the OS
-  private getDesktopPath(){
+  constructor(){
+    // load values from .env file
+    this.PROJECT_NAME = process.env.PROJECT_NAME ?? "";
+  }
+
+  // Ottieni il path Desktop in base al sistema operativo
+  private getDesktopPath(): string {
     if (process.platform === 'win32') {
-      // On Windows, the Desktop folder is under USERPROFILE
-      return path.join(process.env.USERPROFILE, 'Desktop');
+      return path.join(process.env.USERPROFILE || '', 'Desktop');
     } else {
-      // On Unix-based systems, Desktop is under HOME
-      return path.join(process.env.HOME, 'Desktop');
+      return path.join(process.env.HOME || '', 'Desktop');
     }
-  };
+  }
 
-  public main(){
+  public main() {
     program
       .version('1.0.0')
-      .action(() => {
-        if (!projectNameFromEnv) {
-          logger.error('Project name is required! Set it in the .env file or as a command-line argument.');
+      .option('-n, --name <projectName>', 'Project name (overrides .env)')
+      .action((opts) => {
+        // Usa il nome progetto passato da CLI oppure da .env
+        const projectName = opts.name || this.PROJECT_NAME;
+        if (!projectName) {
+          logger.error('Project name is required! Set it in the .env file or pass it via CLI with -n.');
           process.exit(1);
         }
 
-        // Append FE and BE to the final project name
-        const projectNameFE = `${projectNameFromEnv}FE`;
-        const projectNameBE = `${projectNameFromEnv}BE`;
+        const projectNameFE = `${projectName}FE`;
+        const projectNameBE = `${projectName}BE`;
 
-        // Set the project root directory to the Desktop
-        const projectRoot = path.join(this.getDesktopPath(), projectNameFromEnv);
+        const projectRoot = path.join(this.getDesktopPath(), projectName);
 
-        // Check if folder exists and delete it
-        if (fs.existsSync(projectRoot)) {
-          logger.info(`Found existing project folder at ${projectRoot}. Deleting it...`);
-          fs.rmSync(projectRoot, { recursive: true, force: true });
-          logger.info('Existing project folder deleted.');
+        try {
+          // Se la cartella esiste, cancellala
+          if (fs.existsSync(projectRoot)) {
+            logger.info(`Found existing project folder at ${projectRoot}. Deleting it...`);
+            fs.rmSync(projectRoot, { recursive: true, force: true });
+            logger.info('Existing project folder deleted.');
+          }
+
+          // Creazione cartelle progetto
+          fs.mkdirSync(projectRoot, { recursive: true });
+          const frontendPath = path.join(projectRoot, projectNameFE);
+          const backendPath = path.join(projectRoot, projectNameBE);
+          fs.mkdirSync(frontendPath, { recursive: true });
+          fs.mkdirSync(backendPath, { recursive: true });
+
+          logger.info("*********** SET PROJECT PATH *************");
+          logger.info(`Creating project: ${projectName}`);
+          logger.info(`Project Root: ${projectRoot}`);
+          logger.info(`Frontend Path: ${frontendPath}`);
+          logger.info(`Backend Path: ${backendPath}`);
+
+          // Generazione frontend
+          const frontendCLI = new FrontendCLI(projectNameFE, projectRoot, frontendPath);
+          frontendCLI.generate();
+
+          // Generazione database (commentato, scommenta se serve)
+          const databaseCLI = new DatabaseCLI(projectRoot);
+          databaseCLI.generate();
+
+          // Generazione backend
+          const backendCLI = new BackendCLI(projectNameBE, projectRoot, backendPath);
+          backendCLI.generate();
+
+          // Generazione docker-compose.yml
+          const dockerCLI = new DockerCLI(projectRoot);
+          dockerCLI.generate();
+
+          // Generazione README.md
+          const readMeCLI = new ReadMeCLI(projectRoot);
+          readMeCLI.generate();
+
+          logger.info(`${projectName} setup complete!`);
+        } catch (error: any) {
+          logger.error('Error during project setup:', error.message || error);
+          process.exit(1);
         }
-
-        // Set the project name for FE and BE
-        const frontendPath = path.join(projectRoot, projectNameFE);
-        const backendPath = path.join(projectRoot, projectNameBE);
-
-        // Set project path
-        logger.info("*********** SET PROJECT PATH *************")
-        logger.info(`Creating project: ${projectNameFromEnv}`);
-        logger.info(`Project Root: ${projectRoot}`);
-        logger.info(`Frontend Path: ${frontendPath}`);
-        logger.info(`Backend Path: ${backendPath}`);
-
-        // Create project directories
-        fs.mkdirSync(projectRoot, { recursive: true });
-        fs.mkdirSync(frontendPath, { recursive: true });
-        fs.mkdirSync(backendPath, { recursive: true });
-
-        // Generate Frontend
-        const frontendCLI: FrontendCLI = new FrontendCLI(projectNameFE, projectRoot, frontendPath);
-        frontendCLI.generate();
-
-        // Generate Database
-        const databaseCLI: DatabaseCLI = new DatabaseCLI(projectRoot);
-        //databaseCLI.generate();
-
-        // Generate Backend
-        const backendCLI: BackendCLI = new BackendCLI(projectNameBE, projectRoot, backendPath);
-        backendCLI.generate();
-
-        // Generate Docker Compose file
-        const dockerCLI: DockerCLI = new DockerCLI(projectRoot);
-        dockerCLI.generate();
-
-        // Generate README.md
-        const readMeCLI: ReadMeCLI = new ReadMeCLI(projectRoot);
-        readMeCLI.generate();
-
-        logger.info(`${projectNameFromEnv} setup complete!`);
       });
 
-    program.parse();
+    program.parse(process.argv);
   }
 }
 
-let bacaroCli: BacaroCLI = new BacaroCLI()
+const bacaroCli = new BacaroCLI();
 bacaroCli.main();

@@ -1,75 +1,92 @@
 import { BaseCLI } from "./base-cli";
-
-const fs = require('fs');
-const path = require('path');
-const dotenv = require('dotenv');
-const logger = require('winston');
+import fs from 'fs';
+import path from 'path';
+import dotenv from 'dotenv';
+import logger from 'winston';
 
 dotenv.config();
 
-// load values from .env file
-const projectNameFromEnv = process.env.PROJECT_NAME;
-const frontendPort = process.env.FRONTEND_PORT;
-const backendPort = process.env.BACKEND_PORT;
+export class DockerCLI extends BaseCLI {
+  private projectRoot: string;
+  private projectName: string;
+  private frontendPort: string;
+  private backendPort: string;
 
-export class DockerCLI extends BaseCLI{
-    projectRoot!: string;
+  constructor(projectRoot: string) {
+    super();
+    this.projectRoot = projectRoot;
 
-    public constructor(projectRoot: string){
-        super();
-        this.projectRoot = projectRoot;
-    }
+    // load values from .env file
+    this.projectName = process.env.PROJECT_NAME || 'myProject';
+    this.frontendPort = process.env.FRONTEND_PORT || '4200';
+    this.backendPort = process.env.BACKEND_PORT || '3000';
+  }
 
-    private generateHead(){
-        return `
-version: '3.8'
+  private generateHead(): string {
+    return `version: '3.8'
 
-services:`
-    }
+services:`;
+  }
 
-    private generateAngularService(){
-return `
-  ${projectNameFromEnv}FE:
+  private generateAngularService(): string {
+    return `
+  ${this.projectName}FE:
     build:
-      context: ./${projectNameFromEnv}FE
-      ports:
-      - "${frontendPort}:${frontendPort}"
-      volumes:
-      - "./${projectNameFromEnv}FE/app/node_modules"
-      - "./${projectNameFromEnv}FE:/app"
-      networks:
-      - ${projectNameFromEnv}-network
-      restart: unless-stopped`
-    }
+      context: ./${this.projectName}FE
+    ports:
+      - "${this.frontendPort}:${this.frontendPort}"
+    volumes:
+      - "./${this.projectName}FE/app/node_modules"
+      - "./${this.projectName}FE:/app"
+    networks:
+      - ${this.projectName}-network
+    restart: unless-stopped`;
+  }
 
-    private generateDataBase(){
-        //todo rework database-cli
-    }
+  private generateBackendService(): string {
+    return `
+  ${this.projectName}BE:
+    build:
+      context: ./${this.projectName}BE
+    ports:
+      - "${this.backendPort}:${this.backendPort}"
+    volumes:
+      - "./${this.projectName}BE/node_modules"
+      - "./${this.projectName}BE:/app"
+    networks:
+      - ${this.projectName}-network
+    restart: unless-stopped`;
+  }
 
-    private generateVolumes(){
-        return `
+  private generateVolumes(): string {
+    return `
 volumes:
-  ${projectNameFromEnv}-db-data:`
-    }
+  ${this.projectName}-db-data:`;
+  }
 
-    private generateNetwork(){
-        return `
+  private generateNetwork(): string {
+    return `
 networks:
-  ${projectNameFromEnv}-network:
-    driver: bridge`
-    }
-    
-    generate(){
-        const dockerComposePath = path.join(this.projectRoot, 'docker-compose.yml');
-        const dockerComposeContent = (``+
-            this.generateHead() + `\n` +
-            this.generateAngularService() + `\n` +
-            //this.generateDataBase() + `\n` + 
-            this.generateVolumes()+ `\n` +
-            this.generateNetwork() 
-        );
-        fs.writeFileSync(dockerComposePath, dockerComposeContent);
-    }
-}
+  ${this.projectName}-network:
+    driver: bridge`;
+  }
 
-  
+  public generate(): void {
+    try {
+      const dockerComposePath = path.join(this.projectRoot, 'docker-compose.yml');
+
+      const content = [
+        this.generateHead(),
+        this.generateAngularService(),
+        this.generateBackendService(),
+        this.generateVolumes(),
+        this.generateNetwork()
+      ].join('\n');
+
+      fs.writeFileSync(dockerComposePath, content);
+      logger.info(`docker-compose.yml generated at ${dockerComposePath}`);
+    } catch (error: any) {
+      logger.error(`Failed to generate docker-compose.yml: ${error.message || error}`);
+    }
+  }
+}
