@@ -1,28 +1,49 @@
 # blueprint-bacaro-architecture
+La **Bacaro CLI** è uno strumento sviluppato in **Node.js** che permette di generare in modo rapido e automatizzato una struttura completa di progetto **full-stack**, pronta all’uso.  
 
-prerequisiti
-- node 18 >
-- npm install -g typescript 
+L’obiettivo è semplificare la creazione di ambienti di sviluppo moderni, fornendo un template base personalizzabile sia lato **frontend** che **backend**, con il supporto al **database** e al **docker-compose**(wip).
 
-componenti archietturali
-- fe: angular 15 ok + libreria grafica: 
-    - tailwind ko
-    - boostrap ok
-- be: 
-    node express + nodemon ok
-    java spring-boot ko
-- db: 
-    - postgres ok
-    - mongo ok
-- docker-compose generale 1/2
+## ✅ Prerequisiti
+- **Node.js** `>= 18`
+- **TypeScript** installato globalmente:
+  ```bash
+  npm install -g typescript
 
-compilazione:
-- mettersi sulla carta src e dare il comando tsc
-- copiare il file .env all'interno della cartella dist generata prima
+## 🏗️ Componenti Architetturali
 
-avvio:
-- recarsi sulla cartella dist
-- eseguire node bacaro-cli.js
+Frontend:
 
-errori:
-- se bootstrap non va provare ad eseguire: npm config set legacy-peer-deps true e ridare il comando di esecuzione della CLI
+    Angular 15 ✔️
+
+Librerie grafiche:
+
+    Bootstrap ✔️
+
+Backend:
+
+    Node.js + Express + Nodemon ✔️
+
+Database:
+
+    PostgreSQL ✔️
+    MongoDB ✔️
+
+Contenitori:
+
+    Docker Compose (wip)
+
+⚙️ Compilazione
+
+- Posizionarsi nella cartella src
+- Eseguire: tsc
+- Copiare il file .env all’interno della cartella dist generata.
+
+▶️ Avvio
+
+- Entrare nella cartella dist
+- Eseguire: node bacaro-cli.js
+
+🐞 Errori Possibili
+Se Bootstrap non funziona, provare ad eseguire:
+npm config set legacy-peer-deps true
+e rilanciare il comando di esecuzione della CLI.
