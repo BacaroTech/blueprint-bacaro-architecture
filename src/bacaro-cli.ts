@@ -71,15 +71,11 @@ class BacaroCLI {
           const frontendCLI = new FrontendCLI(projectNameFE, projectRoot, frontendPath);
           frontendCLI.generate();
 
-          // Generazione database (commentato, scommenta se serve)
-          const databaseCLI = new DatabaseCLI(projectRoot);
-          databaseCLI.generate();
-
           // Generazione backend
           const backendCLI = new BackendCLI(projectNameBE, projectRoot, backendPath);
           backendCLI.generate();
 
-          // Generazione docker-compose.yml
+          // Generazione docker-compose.yml + database
           const dockerCLI = new DockerCLI(projectRoot);
           dockerCLI.generate();
 

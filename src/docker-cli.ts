@@ -3,44 +3,28 @@ import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
 import logger from 'winston';
+import { DatabaseCLI } from "./database-cli";
 
 dotenv.config();
 
 export class DockerCLI extends BaseCLI {
-  private projectRoot: string;
-  private projectName: string;
-  private frontendPort: string;
-  private backendPort: string;
+  private readonly projectRoot: string;
+  private readonly projectName: string;
+  private readonly backendPort: string;
+  private databaseCLI: DatabaseCLI; 
 
   constructor(projectRoot: string) {
     super();
     this.projectRoot = projectRoot;
 
     // load values from .env file
-    this.projectName = process.env.PROJECT_NAME || 'myProject';
-    this.frontendPort = process.env.FRONTEND_PORT || '4200';
-    this.backendPort = process.env.BACKEND_PORT || '3000';
+    this.projectName = process.env.PROJECT_NAME ?? '';
+    this.backendPort = process.env.BACKEND_PORT ?? '';
+    this.databaseCLI = new DatabaseCLI(this.projectRoot); 
   }
 
   private generateHead(): string {
-    return `version: '3.8'
-
-services:`;
-  }
-
-  private generateAngularService(): string {
-    return `
-  ${this.projectName}FE:
-    build:
-      context: ./${this.projectName}FE
-    ports:
-      - "${this.frontendPort}:${this.frontendPort}"
-    volumes:
-      - "./${this.projectName}FE/app/node_modules"
-      - "./${this.projectName}FE:/app"
-    networks:
-      - ${this.projectName}-network
-    restart: unless-stopped`;
+    return `services:`;
   }
 
   private generateBackendService(): string {
@@ -77,7 +61,8 @@ networks:
 
       const content = [
         this.generateHead(),
-        this.generateAngularService(),
+        //this.generateAngularService(),
+        this.databaseCLI.auxGenerate(),
         this.generateBackendService(),
         this.generateVolumes(),
         this.generateNetwork()

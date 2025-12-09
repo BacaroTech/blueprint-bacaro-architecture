@@ -29,11 +29,8 @@ export class DatabaseCLI extends BaseCLI {
     this.dbName = process.env.DATABASE_NAME;
   }
 
-  private generatePostgress(): void {
-    const content = `version: '3.8'
-
-services:
-  ${this.projectName}db:
+  private generatePostgress(): string {
+    return `${this.projectName}db:
     container_name: ${this.projectName}db
     image: postgres:13
     environment:
@@ -47,28 +44,11 @@ services:
     networks:
       - ${this.projectName}-network
     restart: unless-stopped 
-
-volumes:
-  ${this.projectName}-db-data:
-
-networks:
-  ${this.projectName}-network:
-    driver: bridge
 `;
-
-    try {
-      fs.writeFileSync(path.join(this.projectRoot, "docker-compose.yml"), content, "utf-8");
-      logger.info("Postgres docker-compose.yml generated");
-    } catch (error) {
-      logger.error("Failed to generate Postgres docker-compose.yml", error);
-    }
   }
 
-  private generateMongo(): void {
-    const content = `version: '3.8'
-
-services:
-  ${this.projectName}db:
+  private generateMongo(): string {
+    return `${this.projectName}db:
     container_name: ${this.projectName}db
     image: mongo:6.0
     ports:
@@ -83,31 +63,15 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-
-volumes:
-  ${this.projectName}-db-data:
-
-networks:
-  ${this.projectName}-network:
-    driver: bridge
 `;
-
-    try {
-      fs.writeFileSync(path.join(this.projectRoot, "docker-compose.yml"), content, "utf-8");
-      logger.info("Mongo docker-compose.yml generated");
-    } catch (error) {
-      logger.error("Failed to generate Mongo docker-compose.yml", error);
-    }
   }
 
-  public generate(): void {
+  public auxGenerate(): string {
     switch (this.dbType.toLowerCase()) {
       case "postgres":
-        this.generatePostgress();
-        break;
+        return this.generatePostgress();
       case "mongo":
-        this.generateMongo();
-        break;
+        return this.generateMongo();
       default:
         throw new Error(`Database type "${this.dbType}" not supported.`);
     }
