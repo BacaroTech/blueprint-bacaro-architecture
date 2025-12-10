@@ -1,41 +1,101 @@
 import { BaseCLI } from "./base-cli";
-
-const { execSync } = require('child_process');
-const fs = require('fs');
-const path = require('path');
-const dotenv = require('dotenv');
-const logger = require('winston');
+import { execSync } from 'child_process';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as dotenv from 'dotenv';
+import * as logger from 'winston';
 
 dotenv.config();
 
-// load values from .env file
-const projectNameFromEnv = process.env.PROJECT_NAME;
-const uiLibraryFromEnv = process.env.UI_LIBRARY;
-const frontendPort = process.env.FRONTEND_PORT;
-const angularVersion = process.env.ANGULAR_VERSION;
-const backendPort = process.env.BACKEND_PORT;
-
-export class FrontendCLI extends BaseCLI{
-  private frontendPath: string = "";
+export class FrontendCLI extends BaseCLI {
+  private projectName: string;
+  private projectRoot: string;
+  private frontendPath: string;
   private angularCommand: string = "";
-  private projectNameFE: string = "";
-  private projectRoot: string = "";
 
-  public constructor(projectNameFE: string, projectRoot: string, frontendPath:string){
+  // Load environment variables
+  private PROJECT_NAME: string;
+  private UI_LIBRARY: string;
+  private FRONTEND_PORT: string;
+  private ANGULAR_VERSION: string;
+  private BACKEND_PORT: string;
+
+  public constructor(projectName: string, projectRoot: string, frontendPath: string) {
     super();
-    this.projectNameFE = projectNameFE;
+    this.projectName = projectName;
     this.projectRoot = projectRoot;
     this.frontendPath = frontendPath;
+
+    // load values from .env file
+    this.PROJECT_NAME = process.env.PROJECT_NAME ?? "";
+    this.UI_LIBRARY = process.env.UI_LIBRARY ?? "";
+    this.FRONTEND_PORT = process.env.UI_LIBRARY ?? "";
+    this.ANGULAR_VERSION = process.env.ANGULAR_VERSION ?? "";
+    this.BACKEND_PORT = process.env.BACKEND_PORT ?? "";
   }
 
+  // Generate the entire frontend application
+  public generate(): void {
+    logger.info(`Generating Angular project "${this.projectName}" with version ${this.ANGULAR_VERSION}...`);
+
+    this.generateAngularProject();
+    this.installDependencies();
+    this.createFolderStructure();
+    this.updateEnvironmentFiles();
+    this.updateAppFiles();
+    this.setupErrorHandling();
+    this.setupHttpInterceptor();
+    this.setupUiLibrary();
+    this.createDockerfile();
+    this.updateAngularJson();
+
+    logger.info(`Angular project "${this.projectName}" is configured and running on port ${this.FRONTEND_PORT}.`);
+  }
+
+  // Create Angular project
+  private generateAngularProject(): void {
+    this.angularCommand = `npx -y @angular/cli@${this.ANGULAR_VERSION} new "${this.projectName}" \
+      --directory "${this.projectName}" \
+      --style=scss \
+      --routing \
+      --skip-git`;
+
+    execSync(this.angularCommand, { cwd: this.projectRoot, stdio: 'inherit' });
+  }
+
+  // Install additional dependencies
+  private installDependencies(): void {
+    const projectDir = path.join(this.projectRoot, this.projectName);
+    execSync(`npm install @angular/core@${this.ANGULAR_VERSION} @angular/cli@${this.ANGULAR_VERSION} --legacy-peer-deps`, { cwd: projectDir, stdio: 'inherit' });
+    execSync(`npm install winston @types/winston`, { cwd: this.frontendPath, stdio: 'inherit' });
+  }
+
+  // Create default folder structure
+  private createFolderStructure(): void {
+    const appRoot = path.join(this.frontendPath, 'src', 'app');
+    const folders = ['components', 'services', 'models', 'guards', 'media', 'directives', 'pages'];
+
+    folders.forEach(folder => {
+      const folderPath = path.join(appRoot, folder);
+      if (!fs.existsSync(folderPath)) {
+        fs.mkdirSync(folderPath, { recursive: true });
+        logger.info(`Created folder: ${folderPath}`);
+      }
+    });
+
+    // Create logs directory
+    const logsDir = path.join(this.frontendPath, 'logs');
+    if (!fs.existsSync(logsDir)) {
+      fs.mkdirSync(logsDir, { recursive: true });
+      logger.info(`Created logs directory: ${logsDir}`);
+    }
+  }
+
+  // Create environment files
   private updateEnvironmentFiles(): void {
     const environmentsDir = path.join(this.frontendPath, 'src', 'environments');
-    
-    if (!fs.existsSync(environmentsDir)) {
-      fs.mkdirSync(environmentsDir, { recursive: true });
-    }
-  
-    const envPath = path.join(environmentsDir, 'environment.ts');
+    fs.mkdirSync(environmentsDir, { recursive: true });
+
     const envContent = `
 export const environment = {
   production: false,
@@ -43,9 +103,7 @@ export const environment = {
     level: 'debug'
   }
 };`.trim();
-    fs.writeFileSync(envPath, envContent);
-  
-    const envProdPath = path.join(environmentsDir, 'environment.prod.ts');
+
     const envProdContent = `
 export const environment = {
   production: true,
@@ -53,12 +111,20 @@ export const environment = {
     level: 'info'
   }
 };`.trim();
-    fs.writeFileSync(envProdPath, envProdContent);
-  }  
+
+    fs.writeFileSync(path.join(environmentsDir, 'environment.ts'), envContent);
+    fs.writeFileSync(path.join(environmentsDir, 'environment.prod.ts'), envProdContent);
+  }
+
+  // Update core app files (app.component.ts, app.module.ts, etc.)
+  private updateAppFiles(): void {
+    this.updateAppComponent();
+    this.updateAppModule();
+  }
 
   private updateAppComponent(): void {
-    const appComponentPath = path.join(this.frontendPath, 'src', 'app', 'app.component.ts');
-    const appComponentContent = `
+    const filePath = path.join(this.frontendPath, 'src', 'app', 'app.component.ts');
+    const content = `
 import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 
@@ -68,15 +134,12 @@ import { HttpClient } from '@angular/common/http';
   styleUrls: ['./app.component.scss']
 })
 export class AppComponent implements OnInit {
-  title = '${this.projectNameFE}';
+  title = '${this.projectName}';
   data: any;
   loading = false;
   error: string | null = null;
 
-  constructor(
-    private http: HttpClient
-  ) {
-  }
+  constructor(private http: HttpClient) {}
 
   ngOnInit(): void {
     this.fetchData();
@@ -84,27 +147,27 @@ export class AppComponent implements OnInit {
 
   fetchData(): void {
     this.loading = true;
-    
-    this.http.get('http://localhost:${backendPort}').subscribe({
+    this.http.get('http://localhost:${this.BACKEND_PORT}').subscribe({
       next: (response) => {
         this.data = response;
         this.loading = false;
-        console.log('Successfully fetched data from backend', response);
+        console.log('Fetched data from backend:', response);
       },
       error: (err) => {
         this.error = 'API Error';
         this.loading = false;
-        console.error('Failed to fetch data from backend', err);
+        console.error('Error fetching data:', err);
       },
     });
   }
-}`.trim();
-    fs.writeFileSync(appComponentPath, appComponentContent);
+}
+`.trim();
+    fs.writeFileSync(filePath, content);
   }
 
   private updateAppModule(): void {
-    const appModulePath = path.join(this.frontendPath, 'src', 'app', 'app.module.ts');
-    const appModuleContent = `
+    const filePath = path.join(this.frontendPath, 'src', 'app', 'app.module.ts');
+    const content = `
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { HttpClientModule } from '@angular/common/http';
@@ -115,69 +178,60 @@ import { HttpInterceptorService } from './services/http-interceptor.service';
 import { ErrorHandlerService } from './services/error-handler.service';
 
 @NgModule({
-  declarations: [
-    AppComponent
-  ],
-  imports: [
-    BrowserModule,
-    AppRoutingModule,
-    HttpClientModule
-  ],
-  providers: [
-  ],
+  declarations: [AppComponent],
+  imports: [BrowserModule, AppRoutingModule, HttpClientModule],
+  providers: [],
   bootstrap: [AppComponent]
 })
-export class AppModule { }`.trim();
-    fs.writeFileSync(appModulePath, appModuleContent);
+export class AppModule {}
+`.trim();
+    fs.writeFileSync(filePath, content);
   }
 
-  private setupErrorHandler(): void {
-    const errorHandlerPath = path.join(this.frontendPath, 'src', 'app', 'services', 'error-handler.service.ts');
-    const errorHandlerContent = `
+  // Setup error handler service
+  private setupErrorHandling(): void {
+    const filePath = path.join(this.frontendPath, 'src', 'app', 'services', 'error-handler.service.ts');
+    const content = `
 import { ErrorHandler, Injectable } from '@angular/core';
 
 @Injectable()
 export class ErrorHandlerService implements ErrorHandler {
-
   handleError(error: any): void {
-    console.error('Global error handler', error);
-    // You can add more error handling logic here
+    console.error('Global error handler:', error);
   }
 }`.trim();
-    fs.writeFileSync(errorHandlerPath, errorHandlerContent);
+    fs.writeFileSync(filePath, content);
 
-    // Update app.module.ts to use the error handler
-    const appModulePath = path.join(this.frontendPath, 'src', 'app', 'app.module.ts');
-    let appModuleContent = fs.readFileSync(appModulePath, 'utf8');
-    appModuleContent = appModuleContent.replace(
+    this.updateAppModuleForErrorHandler();
+  }
+
+  private updateAppModuleForErrorHandler(): void {
+    const filePath = path.join(this.frontendPath, 'src', 'app', 'app.module.ts');
+    let content = fs.readFileSync(filePath, 'utf8');
+
+    content = content.replace(
       `import { NgModule } from '@angular/core';`,
       `import { NgModule, ErrorHandler } from '@angular/core';`
     );
-    appModuleContent = appModuleContent.replace(
+
+    content = content.replace(
       `providers: [`,
-      `providers: [
-    { provide: ErrorHandler, useClass: ErrorHandlerService },`
+      `providers: [\n    { provide: ErrorHandler, useClass: ErrorHandlerService },`
     );
-    fs.writeFileSync(appModulePath, appModuleContent);
+
+    fs.writeFileSync(filePath, content);
   }
 
+  // Setup HTTP interceptor service
   private setupHttpInterceptor(): void {
-    const interceptorPath = path.join(this.frontendPath, 'src', 'app', 'services', 'http-interceptor.service.ts');
-    const interceptorContent = `
+    const filePath = path.join(this.frontendPath, 'src', 'app', 'services', 'http-interceptor.service.ts');
+    const content = `
 import { Injectable } from '@angular/core';
-import {
-  HttpRequest,
-  HttpHandler,
-  HttpEvent,
-  HttpInterceptor,
-  HttpResponse,
-  HttpErrorResponse
-} from '@angular/common/http';
+import { HttpRequest, HttpHandler, HttpEvent, HttpInterceptor, HttpResponse, HttpErrorResponse } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 
 @Injectable()
 export class HttpInterceptorService implements HttpInterceptor {
-
   intercept(request: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
     const startTime = Date.now();
     console.debug(\`HTTP \${request.method} \${request.url}\`);
@@ -187,156 +241,75 @@ export class HttpInterceptorService implements HttpInterceptor {
         next: (event) => {
           if (event instanceof HttpResponse) {
             const elapsed = Date.now() - startTime;
-            console.debug(
-              \`HTTP \${request.method} \${request.url} - \${event.status} (\${elapsed}ms)\`
-            );
+            console.debug(\`HTTP \${request.method} \${request.url} - \${event.status} (\${elapsed}ms)\`);
           }
         },
         error: (error: HttpErrorResponse) => {
           const elapsed = Date.now() - startTime;
-          console.error(
-            \`HTTP \${request.method} \${request.url} - \${error.status} (\${elapsed}ms)\`,
-            error.message
-          );
+          console.error(\`HTTP \${request.method} \${request.url} - \${error.status} (\${elapsed}ms)\`, error.message);
         }
       })
     );
   }
 }`.trim();
-    fs.writeFileSync(interceptorPath, interceptorContent);
+    fs.writeFileSync(filePath, content);
 
-    // Update app.module.ts to use the interceptor
-    const appModulePath = path.join(this.frontendPath, 'src', 'app', 'app.module.ts');
-    let appModuleContent = fs.readFileSync(appModulePath, 'utf8');
-    appModuleContent = appModuleContent.replace(
+    this.updateAppModuleForHttpInterceptor();
+  }
+
+  private updateAppModuleForHttpInterceptor(): void {
+    const filePath = path.join(this.frontendPath, 'src', 'app', 'app.module.ts');
+    let content = fs.readFileSync(filePath, 'utf8');
+
+    content = content.replace(
       `import { HttpClientModule } from '@angular/common/http';`,
       `import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';`
     );
-    appModuleContent = appModuleContent.replace(
+
+    content = content.replace(
       `providers: [`,
-      `providers: [
-    { provide: HTTP_INTERCEPTORS, useClass: HttpInterceptorService, multi: true },`
+      `providers: [\n    { provide: HTTP_INTERCEPTORS, useClass: HttpInterceptorService, multi: true },`
     );
-    fs.writeFileSync(appModulePath, appModuleContent);
+
+    fs.writeFileSync(filePath, content);
   }
 
-  //TODO because not working
-  private setTailwind(){
-    logger.info('Installing and configuring Tailwind CSS...');
-
-    // Step 1: Install Tailwind CSS and its dependencies
-    try {
-      execSync(`npm install -D tailwindcss postcss autoprefixer winston @types/winston`, { cwd: this.frontendPath, stdio: 'inherit' });
-    } catch (error: any) {
-      logger.error('Failed to install Tailwind CSS dependencies. Please check your npm setup.');
-      logger.error('Error details:', error.message);
-      process.exit(1);
+  // Setup UI library (only Bootstrap for now)
+  private setupUiLibrary(): void {
+    if (this.UI_LIBRARY === 'bootstrap') {
+      this.setupBootstrap();
+    } else {
+      logger.warn(`Unsupported UI library: ${this.UI_LIBRARY}`);
     }
+  }
 
-    // Step 2: Initialize Tailwind CSS
-    try {
-      execSync(`npx tailwindcss init`, { cwd: this.frontendPath, stdio: 'inherit' });
-    } catch (error: any) {
-      logger.error('Failed to initialize Tailwind CSS. Please check your npm and npx setup.');
-      logger.error('Error details:', error.message);
-      process.exit(1);
-    }
-
-    // Step 3: Create or update tailwind.config.js
-    const tailwindConfig = `
-module.exports = {
-  content: [
-    "./src/**/*.{html,ts}",
-  ],
-  theme: {
-    extend: {},
-  },
-  plugins: [],
-}`;
-    fs.writeFileSync(path.join(this.frontendPath, 'tailwind.config.js'), tailwindConfig);
-
-    // Step 4: Create postcss.config.js
-    const postcssConfig = `
-module.exports = {
-  plugins: {
-    tailwindcss: {},
-    autoprefixer: {},
-  },
-}`;
-    fs.writeFileSync(path.join(this.frontendPath, 'postcss.config.js'), postcssConfig);
-
-    // Step 5: Update styles.scss to include Tailwind CSS directives
-    const stylesPath = path.join(this.frontendPath, 'src', 'styles.scss');
-    const stylesContent = `@tailwind base;\n@tailwind components;\n@tailwind utilities;\n`;
-    fs.writeFileSync(stylesPath, stylesContent);
-
-    // Step 6: Replace the default Angular page with a custom Tailwind page
-    const appComponentHtmlPath = path.join(this.frontendPath, 'src', 'app', 'app.component.html');
-    const customTailwindPage = `
-<div class="min-h-screen bg-gray-100 flex flex-col items-center justify-center">
-  <h1 class="text-4xl font-bold text-blue-600 mb-4">Welcome to ${projectNameFromEnv}</h1>
-  <p class="text-lg text-gray-700">This is a custom page built with Tailwind CSS!</p>
-  <button class="mt-6 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-300">
-    Get Started
-  </button>
-</div>
-
-<div>
-  <h2>Test API node</h2>
-  <div *ngIf="loading">Loading...</div>
-  <div *ngIf="error">{{ error }}</div>
-  <pre>{{ data | json }}</pre>
-</div>
-    `;
-    fs.writeFileSync(appComponentHtmlPath, customTailwindPage);
-
-    logger.info('Tailwind CSS setup completed successfully!');
-  };
-
-  //Set Bootstrap as UI library!
-  private setBootstrap(){
+  private setupBootstrap(): void {
     logger.info('Installing and configuring Bootstrap...');
-  
-    // Step 1: Install Bootstrap and its dependencies
-    try {
-      execSync(`npm install bootstrap @ng-bootstrap/ng-bootstrap winston @types/winston`, { cwd: this.frontendPath, stdio: 'inherit' });
-    } catch (error: any) {
-      logger.error('Failed to install Bootstrap dependencies. Please check your npm setup.');
-      logger.error('Error details:', error.message);
-      process.exit(1);
-    }
-  
-    // Step 2: Update angular.json to include Bootstrap styles
+    execSync(`npm install bootstrap @ng-bootstrap/ng-bootstrap`, { cwd: this.frontendPath, stdio: 'inherit' });
+
+    // Update angular.json
     const angularJsonPath = path.join(this.frontendPath, 'angular.json');
     const angularJson = JSON.parse(fs.readFileSync(angularJsonPath, 'utf8'));
-  
-    // Add Bootstrap CSS to the styles array
-    if (!angularJson.projects[projectNameFromEnv + 'FE']) {
+
+    if (!angularJson.projects[`${this.PROJECT_NAME}FE`]) {
       logger.error('Project name mismatch in angular.json');
       process.exit(1);
-    }    
+    }
 
-    angularJson.projects[projectNameFromEnv + 'FE'].architect.build.options.styles.push(
-      'node_modules/bootstrap/dist/css/bootstrap.min.css'
-    );
-  
-    // Write the updated angular.json file
+    angularJson.projects[`${this.PROJECT_NAME}FE`].architect.build.options.styles.push('node_modules/bootstrap/dist/css/bootstrap.min.css');
     fs.writeFileSync(angularJsonPath, JSON.stringify(angularJson, null, 2));
-  
-    // Step 3: Update styles.scss to include Bootstrap (optional)
+
+    // Add Bootstrap import to styles.scss
     const stylesPath = path.join(this.frontendPath, 'src', 'styles.scss');
-    const stylesContent = `@import "bootstrap/dist/css/bootstrap.min.css";\n`;
-    fs.writeFileSync(stylesPath, stylesContent);
-  
-    // Step 4: Replace the default Angular page with a custom Bootstrap page
+    fs.writeFileSync(stylesPath, `@import "bootstrap/dist/css/bootstrap.min.css";\n`);
+
+    // Replace default Angular page with Bootstrap page
     const appComponentHtmlPath = path.join(this.frontendPath, 'src', 'app', 'app.component.html');
-    const customBootstrapPage = `
+    const bootstrapPage = `
 <div class="container text-center mt-5">
-  <h1 class="display-4 text-primary">Welcome to ${projectNameFromEnv}</h1>
+  <h1 class="display-4 text-primary">Welcome to ${this.PROJECT_NAME}</h1>
   <p class="lead text-muted">This is a custom page built with Bootstrap!</p>
-  <button class="btn btn-primary btn-lg mt-3">
-    Get Started
-  </button>
+  <button class="btn btn-primary btn-lg mt-3">Get Started</button>
 </div>
 
 <div>
@@ -345,105 +318,45 @@ module.exports = {
   <div *ngIf="error">{{ error }}</div>
   <pre>{{ data | json }}</pre>
 </div>`;
-    fs.writeFileSync(appComponentHtmlPath, customBootstrapPage);
-  
-    logger.info('Angular Bootstrap setup completed!');
-  };
+    fs.writeFileSync(appComponentHtmlPath, bootstrapPage);
 
-  //Set FE interface UI
-  private setFEinterfaceUI(){
-    // Check UI_LIBRARY value and modify the Angular CLI command
-    this.angularCommand += ' --package-manager npm';
-    if (uiLibraryFromEnv === 'tailwind') {
-      //TODO FIX NOT WORK
-      this.setTailwind();
-    } else if (uiLibraryFromEnv === 'bootstrap') {
-      this.setBootstrap();
-    } else {
-      logger.warn(`Unsupported UI library: ${uiLibraryFromEnv}`);
-    }
-  };
-
-  //generate folder structure
-  private generateFolder() {
-    const root = path.join(this.projectRoot, this.projectNameFE, 'src', 'app');
-    logger.info('Target root:', root);
-  
-    if (!fs.existsSync(root)) {
-      logger.error('Target folder does not exist:', root);
-      return;
-    }
-  
-    const folders = ['components', 'services', 'models', 'guards', 'media', 'directives', 'pages'];
-  
-    folders.forEach(folder => {
-      const folderPath = path.join(root, folder);
-      if (!fs.existsSync(folderPath)) {
-        fs.mkdirSync(folderPath, { recursive: true });
-        logger.info('Created:', folderPath);
-      }
-    });
-
-    // Create logs directory
-    const logsDir = path.join(this.frontendPath, 'logs');
-    if (!fs.existsSync(logsDir)) {
-      fs.mkdirSync(logsDir, { recursive: true });
-      logger.info('Created logs directory:', logsDir);
-    }
+    logger.info('Bootstrap UI setup complete.');
   }
 
-  //Generete FE project 
-  public generate(){
-    logger.info(`Generating Angular "${angularVersion}" project...\n`);
-  
-    // Angular CLI command to create a new project with specific version
-    this.angularCommand = `npx -y @angular/cli@${angularVersion} new "${this.projectNameFE}" \
-      --directory "${this.projectNameFE}" \
-      --style=scss \
-      --routing \
-      --skip-git \
-      --skip-install`;
-  
-    // Execute the Angular CLI command
-    execSync(this.angularCommand, { cwd: this.projectRoot, stdio: 'inherit' });
-  
-    // Install dependencies explicitly (optional but recommended)
-    const installCommand = `npm install @angular/core@${angularVersion} @angular/cli@${angularVersion} --legacy-peer-deps`;
-    execSync(installCommand, { cwd: path.join(this.projectRoot, this.projectNameFE), stdio: 'inherit' });
+  // Create Dockerfile
+  private createDockerfile(): void {
+    const dockerfilePath = path.join(this.projectRoot, this.projectName, 'Dockerfile');
+    const content = `
+FROM node:12.2.0
 
-    // Install Winston and types
-    execSync(`npm install winston @types/winston`, { cwd: this.frontendPath, stdio: 'inherit' });
+WORKDIR /app
+COPY package.json ./
+RUN npm install
 
-    // Generate folder structure
-    this.generateFolder();
-  
-    // Set up
-    this.updateEnvironmentFiles();
-    this.updateAppComponent();
-    this.updateAppModule();
-    this.setupErrorHandler();
-    this.setupHttpInterceptor();
-  
-    // Rest of your existing code...
-    this.setFEinterfaceUI();
-  
+COPY . .
+EXPOSE ${this.FRONTEND_PORT}
+
+CMD ["npm", "start"]
+`.trim();
+    fs.writeFileSync(dockerfilePath, content);
+  }
+
+  // Update angular.json to set custom port
+  private updateAngularJson(): void {
     const angularJsonPath = path.join(this.frontendPath, 'angular.json');
     const angularJson = JSON.parse(fs.readFileSync(angularJsonPath, 'utf8'));
-  
-    if (!angularJson.projects[this.projectNameFE].architect) {
-      angularJson.projects[this.projectNameFE].architect = {};
+
+    if (!angularJson.projects[this.projectName].architect) {
+      angularJson.projects[this.projectName].architect = {};
     }
-    if (!angularJson.projects[this.projectNameFE].architect.serve) {
-      angularJson.projects[this.projectNameFE].architect.serve = {};
+    if (!angularJson.projects[this.projectName].architect.serve) {
+      angularJson.projects[this.projectName].architect.serve = {};
     }
-    if (!angularJson.projects[this.projectNameFE].architect.serve.options) {
-      angularJson.projects[this.projectNameFE].architect.serve.options = {};
+    if (!angularJson.projects[this.projectName].architect.serve.options) {
+      angularJson.projects[this.projectName].architect.serve.options = {};
     }
-  
-    angularJson.projects[this.projectNameFE].architect.serve.options.port = Number(frontendPort);
-  
+
+    angularJson.projects[this.projectName].architect.serve.options.port = Number(this.FRONTEND_PORT);
     fs.writeFileSync(angularJsonPath, JSON.stringify(angularJson, null, 2));
-  
-    logger.info(`Angular ${angularVersion} application is running on port ${frontendPort}.`);
-  };
+  }
 }

@@ -1,49 +1,21 @@
-# blueprint-bacaro-architecture
-La **Bacaro CLI** è uno strumento sviluppato in **Node.js** che permette di generare in modo rapido e automatizzato una struttura completa di progetto **full-stack**, pronta all’uso.  
+# Blueprint Bacaro Architecture
+Il progetto “blueprint-bacaro-architecture” nasce come una CLI sviluppata per generare progetti usando come riferimento lo stack MEAN, ovvero il MERN ma senza la R di React. Difatti quello che si può fare con questa CLI è generare un progetto monorepo pronto all’uso.
 
-L’obiettivo è semplificare la creazione di ambienti di sviluppo moderni, fornendo un template base personalizzabile sia lato **frontend** che **backend**, con il supporto al **database** e al **docker-compose**(wip).
+## Installazione e configurazione iniziale
+1. crea una cartella dist allo stesso livello delle altre cartelle
+2. compila il file di .env con quelle che sono tue preferenze
+3. inserisci una copia del file .env all'interno della cartella dist
 
-## ✅ Prerequisiti
-- **Node.js** `>= 18`
-- **TypeScript** installato globalmente:
-  ```bash
-  npm install -g typescript
+## Come usarlo
 
-## 🏗️ Componenti Architetturali
+1. compilazione
+``` bash
+npx tsc
+```
 
-Frontend:
+2. una volta compilato
+``` bash
+npx tsc
+node bacaro-cli.js
+```
 
-    Angular 15 ✔️
-
-Librerie grafiche:
-
-    Bootstrap ✔️
-
-Backend:
-
-    Node.js + Express + Nodemon ✔️
-
-Database:
-
-    PostgreSQL ✔️
-    MongoDB ✔️
-
-Contenitori:
-
-    Docker Compose (wip)
-
-⚙️ Compilazione
-
-- Posizionarsi nella cartella src
-- Eseguire: tsc
-- Copiare il file .env all’interno della cartella dist generata.
-
-▶️ Avvio
-
-- Entrare nella cartella dist
-- Eseguire: node bacaro-cli.js
-
-🐞 Errori Possibili
-Se Bootstrap non funziona, provare ad eseguire:
-npm config set legacy-peer-deps true
-e rilanciare il comando di esecuzione della CLI.

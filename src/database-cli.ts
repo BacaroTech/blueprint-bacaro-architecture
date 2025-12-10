@@ -1,101 +1,78 @@
 import { BaseCLI } from "./base-cli";
-
-const fs = require('fs');
-const path = require('path');
-const dotenv = require('dotenv');
-const logger = require('winston');
+import dotenv from "dotenv";
 
 dotenv.config();
 
-// load values from .env file
-const projectNameFromEnv = (process.env.PROJECT_NAME)?.toLocaleLowerCase();
-const DBtype = process.env.DATABASE_TYPE;
-const DBPort = process.env.DATABASE_PORT;
-const DBUsr = process.env.DATABASE_USR;
-const DBPassword = process.env.DATABASE_PASSWORD;
-const DBName = process.env.DATABASE_NAME;
+export class DatabaseCLI extends BaseCLI {
+  private projectRoot: string;
 
-export class DatabaseCLI extends BaseCLI{
-  private projectRoot: string = "";
+  private projectName: string;
+  private dbType: string;
+  private dbPort: string;
+  private dbUser?: string;
+  private dbPassword?: string;
+  private dbName?: string;
 
-  public constructor(projectRoot: string){
+  constructor(projectRoot: string) {
     super();
     this.projectRoot = projectRoot;
+
+    // load values from .env file
+    this.projectName = process.env.PROJECT_NAME?.toLocaleLowerCase() ?? "project";
+    this.dbType = process.env.DATABASE_TYPE ?? "";
+    this.dbPort = process.env.DATABASE_PORT ?? "";
+    this.dbUser = process.env.DATABASE_USR;
+    this.dbPassword = process.env.DATABASE_PASSWORD;
+    this.dbName = process.env.DATABASE_NAME;
   }
 
-  private generatePostgress(){
-    const dockerComposeContent = `
-version: '3.8'
-
-services:
-  ${projectNameFromEnv}db:
-    container_name: ${projectNameFromEnv}db
-    image: postgres:13
-    environment:
-      POSTGRES_PASSWORD: ${DBPassword}
-      POSTGRES_USER: ${DBUsr}
-      POSTGRES_DB: ${DBName}
-    ports:
-      - "${DBPort}:${DBPort}"
-    volumes:
-      - ${projectNameFromEnv}-db-data:/var/lib/postgresql/data
-    networks:
-      - ${projectNameFromEnv}-network
-    restart: unless-stopped 
-
-volumes:
-  ${projectNameFromEnv}-db-data:
-
-networks:
-  ${projectNameFromEnv}-network:
-    driver: bridge
+  private generatePostgress(): string {
+    return `
+  ${this.projectName}-db:
+      container_name: ${this.projectName}-db
+      image: postgres:13
+      environment:
+        POSTGRES_PASSWORD: ${this.dbPassword}
+        POSTGRES_USER: ${this.dbUser}
+        POSTGRES_DB: ${this.dbName}
+      ports:
+        - "${this.dbPort}:5432"
+      volumes:
+        - ${this.projectName}-db-data:/var/lib/postgresql/data
+      networks:
+        - ${this.projectName}-network
+      restart: unless-stopped 
 `;
-    fs.writeFileSync(path.join(this.projectRoot, 'docker-compose.yml'), dockerComposeContent);
   }
-  
-  private generateMongo(){
-    const dockerComposeContent = `
-version: '3.8'
 
-services:
-  ${projectNameFromEnv}db:
-    container_name: ${projectNameFromEnv}db
-    image: mongo:6.0
-    ports:
-      - "${DBPort}:${DBPort}"
-    volumes:
-      - ${projectNameFromEnv}-db-data:/data/db
-    networks:
-      - ${projectNameFromEnv}-network
-    restart: unless-stopped
-    # Optional health check for MongoDB
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-volumes:
-  ${projectNameFromEnv}-db-data:
-
-networks:
-  ${projectNameFromEnv}-network:
-    driver: bridge
+  private generateMongo(): string {
+    return `
+  ${this.projectName}db:
+      container_name: ${this.projectName}db
+      image: mongo:6.0
+      ports:
+        - "${this.dbPort}:27017"
+      volumes:
+        - ${this.projectName}-db-data:/data/db
+      networks:
+        - ${this.projectName}-network
+      restart: unless-stopped
+      healthcheck:
+        test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+        interval: 10s
+        timeout: 5s
+        retries: 5
 `;
-    fs.writeFileSync(path.join(this.projectRoot, 'docker-compose.yml'), dockerComposeContent);
   }
-  
-  //DATABASE
-  public generate(){
-    switch(DBtype){
-      case "postgress": 
-        this.generatePostgress();
-        break;
-      case "mongo": 
-        this.generateMongo();
-        break;
+
+  public auxGenerate(): string {
+    switch (this.dbType.toLowerCase()) {
+      case "postgres":
+        return this.generatePostgress();
+      case "mongo":
+        return this.generateMongo();
       default:
-        throw new Error("Database type not found");
+        throw new Error(`Database type "${this.dbType}" not supported.`);
     }
   }
 }
