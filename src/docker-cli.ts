@@ -10,6 +10,7 @@ dotenv.config();
 export class DockerCLI extends BaseCLI {
   private readonly projectRoot: string;
   private readonly projectName: string;
+  private readonly projectNameBase: string;
   private readonly backendPort: string;
   private databaseCLI: DatabaseCLI; 
 
@@ -18,7 +19,8 @@ export class DockerCLI extends BaseCLI {
     this.projectRoot = projectRoot;
 
     // load values from .env file
-    this.projectName = process.env.PROJECT_NAME ?? '';
+    this.projectName = process.env.PROJECT_NAME?.toLocaleLowerCase() ?? '';
+    this.projectNameBase = process.env.PROJECT_NAME ?? '';
     this.backendPort = process.env.BACKEND_PORT ?? '';
     this.databaseCLI = new DatabaseCLI(this.projectRoot); 
   }
@@ -29,14 +31,14 @@ export class DockerCLI extends BaseCLI {
 
   private generateBackendService(): string {
     return `
-  ${this.projectName}BE:
+  ${this.projectName}-be:
     build:
-      context: ./${this.projectName}BE
+      context: ./${this.projectNameBase}BE
     ports:
       - "${this.backendPort}:${this.backendPort}"
     volumes:
-      - "./${this.projectName}BE/node_modules"
-      - "./${this.projectName}BE:/app"
+      - "./${this.projectNameBase}BE/node_modules:/app/node_modules"
+      - "./${this.projectNameBase}BE:/app"
     networks:
       - ${this.projectName}-network
     restart: unless-stopped`;
@@ -55,7 +57,52 @@ networks:
     driver: bridge`;
   }
 
-  public generate(): void {
+  private generateDockerFileBE(){
+    return `
+# Fase di build (TypeScript -> JavaScript)
+FROM node:18 AS builder
+
+WORKDIR /app
+
+# Copia package.json prima per sfruttare cache Docker
+COPY package*.json ./
+
+# Installa tutte le dipendenze (dev + prod)
+RUN npm install
+
+# Copia il resto del codice
+COPY . .
+
+# Compila TypeScript
+RUN npm run build
+
+
+# Fase per l'immagine finale (solo codice JS)
+FROM node:18 AS runner
+
+WORKDIR /app
+
+# Copia solo ciò che serve a runtime
+COPY package*.json ./
+
+# Installa solo dipendenze *di produzione*
+RUN npm install --omit=dev
+
+# Copia i file compilati
+COPY --from=builder /app/dist ./dist
+
+# Copia file ambiente se ti serve
+COPY .env .env
+
+# Espone la porta del backend
+EXPOSE 4000
+
+# Comando finale
+CMD ["node", "dist/index.js"]
+`
+  }
+
+  private writeDockerCompose(){
     try {
       const dockerComposePath = path.join(this.projectRoot, 'docker-compose.yml');
 
@@ -69,9 +116,24 @@ networks:
       ].join('\n');
 
       fs.writeFileSync(dockerComposePath, content);
-      logger.info(`docker-compose.yml generated at ${dockerComposePath}`);
+      logger.info(`Dockerfile generated at ${dockerComposePath}`);
     } catch (error: any) {
       logger.error(`Failed to generate docker-compose.yml: ${error.message || error}`);
     }
+  }
+
+  private writeDockerFile(){
+    try {
+      const dockerFilePath = path.join(this.projectRoot + '/' + this.projectNameBase + 'BE', 'Dockerfile');
+      fs.writeFileSync(dockerFilePath, this.generateDockerFileBE());
+      logger.info(`docker-compose.yml generated at ${dockerFilePath}`);
+    } catch (error: any) {
+      logger.error(`Failed to generate docker-compose.yml: ${error.message || error}`);
+    }
+  }
+
+  public generate(): void {
+    this.writeDockerFile();
+    this.writeDockerCompose();
   }
 }

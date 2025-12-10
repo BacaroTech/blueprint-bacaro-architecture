@@ -397,6 +397,24 @@ logs`.trim();
     fs.writeFileSync(path.join(this.backendPath, '.gitignore'), gitIngoreContent);
   }
 
+  private writeTSconfigJson(){
+    const gitIngoreContent: string = `
+{
+  "compilerOptions": {
+    "target": "es2017",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "rootDir": "src",
+    "outDir": "dist",
+    "esModuleInterop": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  }
+}`;
+    fs.writeFileSync(path.join(this.backendPath, 'tsconfig.json'), gitIngoreContent);
+  }
+
   public generate() {
     logger.info('Setting up Express backend with TypeScript...');
 
@@ -469,9 +487,15 @@ logs`.trim();
     // Update package.json scripts
     const packageJsonPath = path.join(backendCWD, 'package.json');
     const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+
+    // unisci senza sovrascrivere
     packageJson.scripts = {
-      dev: 'nodemon --exec ts-node src/index.ts'
+      ...packageJson.scripts,
+      dev: "nodemon --exec ts-node src/index.ts",
+      build: "tsc",
+      start: "node dist/index.js"
     };
+
     fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
 
     // Create .env file
@@ -480,6 +504,9 @@ logs`.trim();
     // Create README and .gitignore
     this.writeReadme();
     this.writeGitignore();
+
+    // Create tsconfig.json
+    this.writeTSconfigJson();
 
     // Generate folders
     this.generateFolder();
