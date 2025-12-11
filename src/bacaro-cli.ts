@@ -1,31 +1,27 @@
-import { BackendCLI } from "./backend-cli";
-import { DatabaseCLI } from "./database-cli";
 import { DockerCLI } from "./docker-cli";
 import { FrontendCLI } from "./frontend-cli";
 import { ReadMeCLI } from "./readme-cli";
-
 import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
 import { program } from 'commander';
 import logger from 'winston';
+import { BackendCLI } from "./backend-cli";
+import { DictionaryCLI } from "./dictionary-cli" 
 
 dotenv.config();
 
-class BacaroCLI {
-  private PROJECT_NAME: string;
-
+class BacaroCLI extends DictionaryCLI {
   constructor(){
-    // load values from .env file
-    this.PROJECT_NAME = process.env.PROJECT_NAME ?? "";
+    super();
   }
 
   // Ottieni il path Desktop in base al sistema operativo
   private getDesktopPath(): string {
     if (process.platform === 'win32') {
-      return path.join(process.env.USERPROFILE || '', 'Desktop');
+      return path.join(this.USER_PROFILE || '', 'Desktop');
     } else {
-      return path.join(process.env.HOME || '', 'Desktop');
+      return path.join(this.HOME || '', 'Desktop');
     }
   }
 
@@ -41,8 +37,8 @@ class BacaroCLI {
           process.exit(1);
         }
 
-        const projectNameFE = `${projectName}FE`;
-        const projectNameBE = `${projectName}BE`;
+        const projectNameFE: string = `${projectName}FE`;
+        const projectNameBE: string = `${projectName}BE`;
 
         const projectRoot = path.join(this.getDesktopPath(), projectName);
 
@@ -94,5 +90,6 @@ class BacaroCLI {
   }
 }
 
+// Execute CLI and enjoy :)
 const bacaroCli = new BacaroCLI();
 bacaroCli.main();

@@ -13,25 +13,11 @@ export class FrontendCLI extends BaseCLI {
   private frontendPath: string;
   private angularCommand: string = "";
 
-  // Load environment variables
-  private PROJECT_NAME: string;
-  private UI_LIBRARY: string;
-  private FRONTEND_PORT: string;
-  private ANGULAR_VERSION: string;
-  private BACKEND_PORT: string;
-
   public constructor(projectName: string, projectRoot: string, frontendPath: string) {
     super();
     this.projectName = projectName;
     this.projectRoot = projectRoot;
     this.frontendPath = frontendPath;
-
-    // load values from .env file
-    this.PROJECT_NAME = process.env.PROJECT_NAME ?? "";
-    this.UI_LIBRARY = process.env.UI_LIBRARY ?? "";
-    this.FRONTEND_PORT = process.env.UI_LIBRARY ?? "";
-    this.ANGULAR_VERSION = process.env.ANGULAR_VERSION ?? "";
-    this.BACKEND_PORT = process.env.BACKEND_PORT ?? "";
   }
 
   // Generate the entire frontend application

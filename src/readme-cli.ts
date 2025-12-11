@@ -8,27 +8,19 @@ dotenv.config();
 
 export class ReadMeCLI extends BaseCLI {
   private projectRoot: string;
-  private projectName: string;
-  private projectDescription: string;
-  private angularVersion: string;
 
   constructor(projectRoot: string) {
     super();
     this.projectRoot = projectRoot;
-
-    // load values from .env file
-    this.projectName = process.env.PROJECT_NAME ?? "Project Name";
-    this.projectDescription = process.env.PROJECT_DESCRIPTION ?? "Project description not provided.";
-    this.angularVersion = process.env.ANGULAR_VERSION ?? "latest";
   }
 
   public generate(): void {
-    const readmeContent = `# ${this.projectName}
-${this.projectDescription}
+    const readmeContent = `# ${this.PROJECT_NAME}
+${this.PROJECT_DESCRIPTION}
 
 ## Documentazioni utili
 
-Angular: [Link alla documentazione](https://v${this.angularVersion}.angular.io/docs)
+Angular: [Link alla documentazione](https://v${this.ANGULAR_VERSION}.angular.io/docs)
 
 Node express: [Link alla documentazione](https://nodejs.org/docs/latest/api/)
 

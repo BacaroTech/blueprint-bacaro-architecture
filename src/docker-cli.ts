@@ -9,19 +9,13 @@ dotenv.config();
 
 export class DockerCLI extends BaseCLI {
   private readonly projectRoot: string;
-  private readonly projectName: string;
-  private readonly projectNameBase: string;
-  private readonly backendPort: string;
+  private readonly PROJECT_NAME_TOLOWER: string = this.PROJECT_NAME.toLocaleLowerCase() ?? '';
   private databaseCLI: DatabaseCLI; 
 
   constructor(projectRoot: string) {
     super();
     this.projectRoot = projectRoot;
 
-    // load values from .env file
-    this.projectName = process.env.PROJECT_NAME?.toLocaleLowerCase() ?? '';
-    this.projectNameBase = process.env.PROJECT_NAME ?? '';
-    this.backendPort = process.env.BACKEND_PORT ?? '';
     this.databaseCLI = new DatabaseCLI(this.projectRoot); 
   }
 
@@ -31,29 +25,29 @@ export class DockerCLI extends BaseCLI {
 
   private generateBackendService(): string {
     return `
-  ${this.projectName}-be:
+  ${this.PROJECT_NAME_TOLOWER}-be:
     build:
-      context: ./${this.projectNameBase}BE
+      context: ./${this.PROJECT_NAME}BE
     ports:
-      - "${this.backendPort}:${this.backendPort}"
+      - "${this.BACKEND_PORT}:${this.BACKEND_PORT}"
     volumes:
-      - "./${this.projectNameBase}BE/node_modules:/app/node_modules"
-      - "./${this.projectNameBase}BE:/app"
+      - "./${this.PROJECT_NAME}BE/node_modules:/app/node_modules"
+      - "./${this.PROJECT_NAME}BE:/app"
     networks:
-      - ${this.projectName}-network
+      - ${this.PROJECT_NAME_TOLOWER}-network
     restart: unless-stopped`;
   }
 
   private generateVolumes(): string {
     return `
 volumes:
-  ${this.projectName}-db-data:`;
+  ${this.PROJECT_NAME_TOLOWER}-db-data:`;
   }
 
   private generateNetwork(): string {
     return `
 networks:
-  ${this.projectName}-network:
+  ${this.PROJECT_NAME_TOLOWER}-network:
     driver: bridge`;
   }
 
@@ -124,7 +118,7 @@ CMD ["node", "dist/index.js"]
 
   private writeDockerFile(){
     try {
-      const dockerFilePath = path.join(this.projectRoot + '/' + this.projectNameBase + 'BE', 'Dockerfile');
+      const dockerFilePath = path.join(this.projectRoot + '/' + this.PROJECT_NAME + 'BE', 'Dockerfile');
       fs.writeFileSync(dockerFilePath, this.generateDockerFileBE());
       logger.info(`docker-compose.yml generated at ${dockerFilePath}`);
     } catch (error: any) {
