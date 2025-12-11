@@ -5,6 +5,7 @@ dotenv.config();
 
 export class DatabaseCLI extends BaseCLI {
   private projectRoot: string;
+  private readonly PROJECT_NAME_TOLOWER: string = this.PROJECT_NAME.toLocaleLowerCase() ?? '';
 
   constructor(projectRoot: string) {
     super();
@@ -23,9 +24,9 @@ export class DatabaseCLI extends BaseCLI {
       ports:
         - "${this.DATABASE_PORT}:5432"
       volumes:
-        - ${this.PROJECT_NAME}-db-data:/var/lib/postgresql/data
+        - ${this.PROJECT_NAME_TOLOWER}-db-data:/var/lib/postgresql/data
       networks:
-        - ${this.PROJECT_NAME}-network
+        - ${this.PROJECT_NAME_TOLOWER}-network
       restart: unless-stopped 
 `;
   }
