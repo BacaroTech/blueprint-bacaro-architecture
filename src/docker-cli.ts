@@ -102,7 +102,6 @@ CMD ["node", "dist/index.js"]
 
       const content = [
         this.generateHead(),
-        //this.generateAngularService(),
         this.databaseCLI.auxGenerate(),
         this.generateBackendService(),
         this.generateVolumes(),

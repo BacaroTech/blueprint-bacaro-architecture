@@ -8,9 +8,9 @@ import logger from 'winston';
 dotenv.config();
 
 export class BackendNodeCLI extends BaseCLI {
-  projectRoot: string = "";
-  backendPath: string = "";
-  projectNameBE: string = "";
+  private readonly projectRoot: string;
+  private readonly backendPath: string;
+  private readonly projectNameBE: string;
 
   public constructor(projectNameBE: string, projectRoot: string, backendPath: string) {
     super();

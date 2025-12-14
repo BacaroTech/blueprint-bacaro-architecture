@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 export class DatabaseCLI extends BaseCLI {
-  private projectRoot: string;
+  private readonly projectRoot: string;
   private readonly PROJECT_NAME_TOLOWER: string = this.PROJECT_NAME.toLocaleLowerCase() ?? '';
 
   constructor(projectRoot: string) {

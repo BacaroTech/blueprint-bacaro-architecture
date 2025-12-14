@@ -12,9 +12,9 @@ dotenv.config();
 
 export class BackendCLI extends BaseCLI {
 
-    private projectNameBE: string;
-    private projectRoot: string;
-    private backendPath: string;
+    private readonly projectNameBE: string;
+    private readonly projectRoot: string;
+    private readonly backendPath: string;
 
     constructor(projectNameBE: string, projectRoot: string, backendPath: string){
         super();
@@ -24,14 +24,16 @@ export class BackendCLI extends BaseCLI {
     }
 
     public generate(): void {
-        // Generazione backend
+        // Backend generation
         switch (this.BACKEND_TYPE) {
             case 'springboot': {
+                logger.info('Backend generation: springboot')
                 const backendCLI = new BackendSpringbootCLI(this.projectNameBE, this.projectRoot, this.backendPath);
                 backendCLI.generate();
                 break;
             }
             case 'node': {
+                logger.info('Backend generation: node')
                 const backendCLI = new BackendNodeCLI(this.projectNameBE, this.projectRoot, this.backendPath);
                 backendCLI.generate();
                 break;

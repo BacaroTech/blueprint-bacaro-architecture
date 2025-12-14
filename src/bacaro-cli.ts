@@ -11,12 +11,20 @@ import { DictionaryCLI } from "./dictionary-cli"
 
 dotenv.config();
 
+/**
+ * TODO
+ * - convert all in english
+ * - disabled generate section
+ * - improve comments in logger
+ * - improve all comments' methods 
+ */
+
 class BacaroCLI extends DictionaryCLI {
   constructor(){
     super();
   }
 
-  // Ottieni il path Desktop in base al sistema operativo
+  // Get the Desktop path based on your operating system
   private getDesktopPath(): string {
     if (process.platform === 'win32') {
       return path.join(this.USER_PROFILE || '', 'Desktop');
@@ -43,14 +51,14 @@ class BacaroCLI extends DictionaryCLI {
         const projectRoot = path.join(this.getDesktopPath(), projectName);
 
         try {
-          // Se la cartella esiste, cancellala
+          // If the folder exists, delete it
           if (fs.existsSync(projectRoot)) {
             logger.info(`Found existing project folder at ${projectRoot}. Deleting it...`);
             fs.rmSync(projectRoot, { recursive: true, force: true });
             logger.info('Existing project folder deleted.');
           }
 
-          // Creazione cartelle progetto
+          // Creating project folders
           fs.mkdirSync(projectRoot, { recursive: true });
           const frontendPath = path.join(projectRoot, projectNameFE);
           const backendPath = path.join(projectRoot, projectNameBE);
@@ -63,22 +71,27 @@ class BacaroCLI extends DictionaryCLI {
           logger.info(`Frontend Path: ${frontendPath}`);
           logger.info(`Backend Path: ${backendPath}`);
 
-          // Generazione frontend
+          // Frontend generation
+          logger.info("*********** Frontend generation *************");
           const frontendCLI = new FrontendCLI(projectNameFE, projectRoot, frontendPath);
           frontendCLI.generate();
 
-          // Generazione backend
+          // Backend generation
+          logger.info("*********** Backend generation *************");
           const backendCLI = new BackendCLI(projectNameBE, projectRoot, backendPath);
           backendCLI.generate();
 
-          // Generazione docker-compose.yml + database
+          // Generate Docker-compose.yml + Database
+          logger.info("*********** Generate Docker-compose.yml + Database *************");
           const dockerCLI = new DockerCLI(projectRoot);
           dockerCLI.generate();
 
-          // Generazione README.md
+          // Generating README.md
+          logger.info("*********** Generating README.md *************");
           const readMeCLI = new ReadMeCLI(projectRoot);
           readMeCLI.generate();
 
+          logger.info("*********** setup complete *************");
           logger.info(`${projectName} setup complete!`);
         } catch (error: any) {
           logger.error('Error during project setup:', error.message || error);

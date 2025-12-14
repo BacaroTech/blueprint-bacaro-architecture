@@ -6,8 +6,13 @@ import logger from "winston";
 
 dotenv.config();
 
+/**
+ * TODO
+ * - fix doc in base of cases
+ */
+
 export class ReadMeCLI extends BaseCLI {
-  private projectRoot: string;
+    private readonly projectRoot: string;
 
   constructor(projectRoot: string) {
     super();
@@ -28,9 +33,9 @@ Postgres: [Link alla documentazione](https://node-postgres.com/)
 
 ---
 
-Questa repository è frutto della BacaroTech CLI
+This repository is a result of the BacaroTech CLI
 
-Scopri di più su questa repo: [Link alla repo](https://github.com/BacaroTech/blueprint-bacaro-architecture)
+Learn more about this repo: [Link to the repo](https://github.com/BacaroTech/blueprint-bacaro-architecture)
 `;
 
     try {

@@ -8,9 +8,9 @@ import * as logger from 'winston';
 dotenv.config();
 
 export class FrontendCLI extends BaseCLI {
-  private projectName: string;
-  private projectRoot: string;
-  private frontendPath: string;
+  private readonly projectName: string;
+  private readonly projectRoot: string;
+  private readonly frontendPath: string;
   private angularCommand: string = "";
 
   public constructor(projectName: string, projectRoot: string, frontendPath: string) {
@@ -32,7 +32,6 @@ export class FrontendCLI extends BaseCLI {
     this.setupErrorHandling();
     this.setupHttpInterceptor();
     this.setupUiLibrary();
-    this.createDockerfile();
     this.updateAngularJson();
 
     logger.info(`Angular project "${this.projectName}" is configured and running on port ${this.FRONTEND_PORT}.`);
@@ -309,23 +308,6 @@ export class HttpInterceptorService implements HttpInterceptor {
     logger.info('Bootstrap UI setup complete.');
   }
 
-  // Create Dockerfile
-  private createDockerfile(): void {
-    const dockerfilePath = path.join(this.projectRoot, this.projectName, 'Dockerfile');
-    const content = `
-FROM node:12.2.0
-
-WORKDIR /app
-COPY package.json ./
-RUN npm install
-
-COPY . .
-EXPOSE ${this.FRONTEND_PORT}
-
-CMD ["npm", "start"]
-`.trim();
-    fs.writeFileSync(dockerfilePath, content);
-  }
 
   // Update angular.json to set custom port
   private updateAngularJson(): void {
