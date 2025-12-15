@@ -1,3 +1,6 @@
+/**
+ * Class containing all loads from the env file
+ */
 export class DictionaryCLI {
     protected BACKEND_PORT: string;
     protected LOG_LEVEL: string;

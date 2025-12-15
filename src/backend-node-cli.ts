@@ -7,6 +7,9 @@ import logger from 'winston';
 
 dotenv.config();
 
+/**
+ * Backend Node generation 
+ */
 export class BackendNodeCLI extends BaseCLI {
   private readonly projectRoot: string;
   private readonly backendPath: string;
@@ -19,7 +22,10 @@ export class BackendNodeCLI extends BaseCLI {
     this.backendPath = backendPath;
   }
 
-  protected generateFolder() {
+  /**
+   * Generate the different folders with the correct tree structure
+   */
+  protected generateFolder(): void {
     const root = path.join(this.backendPath, 'src');
     logger.info('Target root:', root);
 
@@ -39,6 +45,10 @@ export class BackendNodeCLI extends BaseCLI {
     });
   }
 
+  /**
+   * Generate the backend piece to handle the logs
+   * @returns Content of file logger.ts
+   */
   private getLoggerConfig(): string {
     return `
 // src/config/logger.ts
@@ -353,7 +363,7 @@ LOG_LEVEL=${this.LOG_LEVEL}`;
 
   private writeReadme() {
     const readMeContet = `# ${this.projectRoot}
-Avvio locale: \`npm run dev\`
+Local startup: \`npm run dev\`
 
 ## Logging
 Logs are stored in the \`logs\` directory with the following files:
@@ -466,7 +476,7 @@ logs`.trim();
     const packageJsonPath = path.join(backendCWD, 'package.json');
     const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
 
-    // unisci senza sovrascrivere
+    // Merge without overwriting
     packageJson.scripts = {
       ...packageJson.scripts,
       dev: "nodemon --exec ts-node src/index.ts",

@@ -1,7 +1,4 @@
 import { BaseCLI } from "./base-cli";
-import { execSync } from 'child_process';
-import fs from 'fs';
-import path from 'path';
 import dotenv from "dotenv";
 import logger from 'winston';
 import { BackendSpringbootCLI } from "./backend-springboot-cli";
@@ -10,6 +7,9 @@ import { error } from "console";
 
 dotenv.config();
 
+/**
+ * Backend generation aux class
+ */
 export class BackendCLI extends BaseCLI {
 
     private readonly projectNameBE: string;

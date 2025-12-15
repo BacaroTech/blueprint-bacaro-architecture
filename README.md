@@ -1,21 +1,19 @@
 # Blueprint Bacaro Architecture
-Il progetto “blueprint-bacaro-architecture” nasce come una CLI sviluppata per generare progetti usando come riferimento lo stack MEAN, ovvero il MERN ma senza la R di React. Difatti quello che si può fare con questa CLI è generare un progetto monorepo pronto all’uso.
+The "blueprint-bacaro-architecture" project was born as a CLI developed to generate projects using the MEAN stack as a reference, that is, MERN but without React's R. In fact, what you can do with this CLI is generate a ready-to-use monorepo project.
 
-## Installazione e configurazione iniziale
-1. crea una cartella dist allo stesso livello delle altre cartelle
-2. compila il file di .env con quelle che sono tue preferenze
-3. inserisci una copia del file .env all'interno della cartella dist
+## Installation and initial configuration
+1. Create a dist folder at the same level as the other folders
+2. Compile the .env file with your preferences
+3. Place a copy of the .env file in the dist folder
 
-## Come usarlo
+## How to use it
 
-1. compilazione
+1. Compile
 ``` bash
 npx tsc
 ```
 
-2. una volta compilato
+2. Once compiled
 ``` bash
 npx tsc
 node bacaro-cli.js
-```
-

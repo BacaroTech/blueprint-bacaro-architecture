@@ -32,7 +32,7 @@ export class BackendSpringbootCLI extends BaseCLI {
 
         logger.info('Creating Spring Boot folder structure...');
 
-        // Cartelle principali Java
+        // Java root folders
         const javaFolders = [
             'config',
             'controller',
@@ -53,13 +53,13 @@ export class BackendSpringbootCLI extends BaseCLI {
             }
         });
 
-        // Cartella resources
+        // Folder resources
         if (!fs.existsSync(resourcesPath)) {
             fs.mkdirSync(resourcesPath, { recursive: true });
             logger.info('Created:', resourcesPath);
         }
 
-        // Cartella test
+        // Folder test
         if (!fs.existsSync(testPath)) {
             fs.mkdirSync(testPath, { recursive: true });
             logger.info('Created:', testPath);
@@ -414,10 +414,10 @@ build/
         logger.info(`Generating Spring Boot backend: ${this.projectNameBE}`);
         
         try {
-            // Crea la struttura delle cartelle
+            // Create the folder structure
             this.generateFolder();
             
-            // Genera i file di configurazione
+            // Generate configuration files
             this.generatePomXml();
             this.generateApplicationProperties();
             this.generateMainApplication();

@@ -1,5 +1,8 @@
 import { DictionaryCLI } from "./dictionary-cli"
 
+/**
+ * Base class that all generators must extend
+ */
 export class BaseCLI extends DictionaryCLI {
     /**
      * Generate subproject

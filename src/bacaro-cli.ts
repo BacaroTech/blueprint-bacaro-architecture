@@ -13,7 +13,6 @@ dotenv.config();
 
 /**
  * TODO
- * - convert all in english
  * - disabled generate section
  * - improve comments in logger
  * - improve all comments' methods 
@@ -24,7 +23,10 @@ class BacaroCLI extends DictionaryCLI {
     super();
   }
 
-  // Get the Desktop path based on your operating system
+  /**
+  * Get the Desktop path based on your operating system
+  * @returns Join all arguments together and normalize the resulting pat
+  */
   private getDesktopPath(): string {
     if (process.platform === 'win32') {
       return path.join(this.USER_PROFILE || '', 'Desktop');
@@ -33,12 +35,15 @@ class BacaroCLI extends DictionaryCLI {
     }
   }
 
-  public main() {
+  /**
+   * Orchestrator of the cli
+   */
+  public main(): void {
     program
       .version('1.0.0')
       .option('-n, --name <projectName>', 'Project name (overrides .env)')
       .action((opts) => {
-        // Usa il nome progetto passato da CLI oppure da .env
+        // Use the project name passed from CLI or .env file
         const projectName = opts.name || this.PROJECT_NAME;
         if (!projectName) {
           logger.error('Project name is required! Set it in the .env file or pass it via CLI with -n.');
@@ -91,8 +96,8 @@ class BacaroCLI extends DictionaryCLI {
           const readMeCLI = new ReadMeCLI(projectRoot);
           readMeCLI.generate();
 
-          logger.info("*********** setup complete *************");
-          logger.info(`${projectName} setup complete!`);
+          logger.info("*********** Setup completed *************");
+          logger.info(`${projectName} setup completed!`);
         } catch (error: any) {
           logger.error('Error during project setup:', error.message || error);
           process.exit(1);

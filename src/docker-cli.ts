@@ -53,45 +53,45 @@ networks:
 
   private generateDockerFileBE(){
     return `
-# Fase di build (TypeScript -> JavaScript)
+# Build Phase (TypeScript -> JavaScript)
 FROM node:18 AS builder
 
 WORKDIR /app
 
-# Copia package.json prima per sfruttare cache Docker
+# Copy package.json first to take advantage of Docker cache
 COPY package*.json ./
 
-# Installa tutte le dipendenze (dev + prod)
+# Install all dependencies (dev + prod)
 RUN npm install
 
-# Copia il resto del codice
+# Copy the rest of the code
 COPY . .
 
-# Compila TypeScript
+# Compile TypeScript
 RUN npm run build
 
 
-# Fase per l'immagine finale (solo codice JS)
+# Final image step (JS code only)
 FROM node:18 AS runner
 
 WORKDIR /app
 
-# Copia solo ciò che serve a runtime
+# Copy only what is needed at runtime
 COPY package*.json ./
 
-# Installa solo dipendenze *di produzione*
+# Install only *production* dependencies
 RUN npm install --omit=dev
 
-# Copia i file compilati
+# Copy the compiled files
 COPY --from=builder /app/dist ./dist
 
-# Copia file ambiente se ti serve
+# Copy environment file
 COPY .env .env
 
-# Espone la porta del backend
+# Exposes the backend port
 EXPOSE 4000
 
-# Comando finale
+# Final command
 CMD ["node", "dist/index.js"]
 `
   }
