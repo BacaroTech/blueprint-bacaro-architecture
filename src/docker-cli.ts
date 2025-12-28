@@ -10,13 +10,13 @@ dotenv.config();
 export class DockerCLI extends BaseCLI {
   private readonly projectRoot: string;
   private readonly PROJECT_NAME_TOLOWER: string = this.PROJECT_NAME.toLocaleLowerCase() ?? '';
-  private databaseCLI: DatabaseCLI; 
+  private databaseCLI: DatabaseCLI;
 
   constructor(projectRoot: string) {
     super();
     this.projectRoot = projectRoot;
 
-    this.databaseCLI = new DatabaseCLI(this.projectRoot); 
+    this.databaseCLI = new DatabaseCLI(this.projectRoot);
   }
 
   private generateHead(): string {
@@ -51,7 +51,7 @@ networks:
     driver: bridge`;
   }
 
-  private generateDockerFileBE(){
+  private generateDockerFileNodeBE() {
     return `
 # Build Phase (TypeScript -> JavaScript)
 FROM node:18 AS builder
@@ -96,7 +96,40 @@ CMD ["node", "dist/index.js"]
 `
   }
 
-  private writeDockerCompose(){
+private generateDockerFileSpringBE(): string {
+    return `# Stage 1: Build
+FROM maven:3.9-eclipse-temurin-17 AS build
+WORKDIR /app
+
+# Copy pom.xml and download dependencies
+COPY pom.xml .
+RUN mvn dependency:go-offline -B
+
+# Copy source code and build
+COPY src ./src
+RUN mvn clean package -DskipTests
+
+# Verify the JAR was created
+RUN ls -la /app/target/
+
+# Stage 2: Runtime
+FROM eclipse-temurin:17-jre-alpine
+WORKDIR /app
+
+# Copy the JAR from build stage (explicitly use app.jar since finalName=app)
+COPY --from=build /app/target/app.jar app.jar
+
+# Verify the JAR was copied
+RUN ls -la /app/
+
+# Expose port
+EXPOSE ${this.BACKEND_PORT}
+
+# Run the application
+ENTRYPOINT ["java", "-jar", "app.jar"]`;
+}
+
+  private writeDockerCompose() {
     try {
       const dockerComposePath = path.join(this.projectRoot, 'docker-compose.yml');
 
@@ -115,13 +148,19 @@ CMD ["node", "dist/index.js"]
     }
   }
 
-  private writeDockerFile(){
+  private writeDockerFile(): void {
     try {
+      const isNode = process.env.BACKEND_TYPE === 'node'; // oppure usa una tua variabile di classe
       const dockerFilePath = path.join(this.projectRoot + '/' + this.PROJECT_NAME + 'BE', 'Dockerfile');
-      fs.writeFileSync(dockerFilePath, this.generateDockerFileBE());
-      logger.info(`docker-compose.yml generated at ${dockerFilePath}`);
+
+      const dockerContent = isNode
+        ? this.generateDockerFileNodeBE()
+        : this.generateDockerFileSpringBE();
+
+      fs.writeFileSync(dockerFilePath, dockerContent);
+      logger.info(`Dockerfile generated at ${dockerFilePath}`);
     } catch (error: any) {
-      logger.error(`Failed to generate docker-compose.yml: ${error.message || error}`);
+      logger.error(`Failed to generate Dockerfile: ${error.message || error}`);
     }
   }
 

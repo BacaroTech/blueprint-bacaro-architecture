@@ -11,14 +11,9 @@ import { DictionaryCLI } from "./dictionary-cli"
 
 dotenv.config();
 
-/**
- * TODO
- * - disabled generate section
- * - improve comments in logger
- * - improve all comments' methods 
- */
-
 class BacaroCLI extends DictionaryCLI {
+  private readonly messagePhaseSkip: string = 'Phase skipped by configuration';
+
   constructor(){
     super();
   }
@@ -79,22 +74,34 @@ class BacaroCLI extends DictionaryCLI {
           // Frontend generation
           logger.info("*********** Frontend generation *************");
           const frontendCLI = new FrontendCLI(projectNameFE, projectRoot, frontendPath);
-          frontendCLI.generate();
+          if(this.ENABLE_GENERATE_FRONTEND === 'true')
+            frontendCLI.generate();
+          else  
+            logger.info(this.messagePhaseSkip)
 
           // Backend generation
           logger.info("*********** Backend generation *************");
           const backendCLI = new BackendCLI(projectNameBE, projectRoot, backendPath);
-          backendCLI.generate();
+          if(this.ENABLE_GENERATE_BACKEND === 'true')
+            backendCLI.generate();
+          else  
+            logger.info(this.messagePhaseSkip)
 
           // Generate Docker-compose.yml + Database
           logger.info("*********** Generate Docker-compose.yml + Database *************");
           const dockerCLI = new DockerCLI(projectRoot);
-          dockerCLI.generate();
+          if(this.ENABLE_GENERATE_DOCKER === 'true')
+            dockerCLI.generate();
+          else  
+            logger.info(this.messagePhaseSkip)
 
           // Generating README.md
           logger.info("*********** Generating README.md *************");
           const readMeCLI = new ReadMeCLI(projectRoot);
-          readMeCLI.generate();
+          if(this.ENABLE_GENERATE_README === 'true')
+            readMeCLI.generate();
+          else  
+            logger.info(this.messagePhaseSkip)
 
           logger.info("*********** Setup completed *************");
           logger.info(`${projectName} setup completed!`);

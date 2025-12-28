@@ -6,11 +6,6 @@ import logger from "winston";
 
 dotenv.config();
 
-/**
- * TODO
- * - fix doc in base of cases
- */
-
 export class ReadMeCLI extends BaseCLI {
   private readonly projectRoot: string;
 

@@ -14,7 +14,7 @@ export class DatabaseCLI extends BaseCLI {
 
   private generatePostgress(): string {
     return `
-  ${this.PROJECT_NAME}-db:
+  ${this.PROJECT_NAME_TOLOWER}-db:
       container_name: ${this.PROJECT_NAME}-db
       image: postgres:13
       environment:
@@ -33,15 +33,15 @@ export class DatabaseCLI extends BaseCLI {
 
   private generateMongo(): string {
     return `
-  ${this.PROJECT_NAME}db:
+  ${this.PROJECT_NAME_TOLOWER}-db:
       container_name: ${this.PROJECT_NAME}db
       image: mongo:6.0
       ports:
         - "${this.DATABASE_PORT}:27017"
       volumes:
-        - ${this.PROJECT_NAME}-db-data:/data/db
+        - ${this.PROJECT_NAME_TOLOWER}-db-data:/data/db
       networks:
-        - ${this.PROJECT_NAME}-network
+        - ${this.PROJECT_NAME_TOLOWER}-network
       restart: unless-stopped
       healthcheck:
         test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]

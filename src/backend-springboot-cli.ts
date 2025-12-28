@@ -6,12 +6,6 @@ import logger from 'winston';
 
 dotenv.config();
 
-/**
- * TODO 
- * - swagger
- * - attach to datasource selected -> mongo/postgress
- */
-
 export class BackendSpringbootCLI extends BaseCLI {
     private readonly projectRoot: string;
     private readonly backendPath: string;
@@ -41,7 +35,6 @@ export class BackendSpringbootCLI extends BaseCLI {
             'model',
             'dto',
             'exception',
-            'security',
             'util'
         ];
 
@@ -67,6 +60,25 @@ export class BackendSpringbootCLI extends BaseCLI {
     }
 
     private generatePomXml(): void {
+        const isPostgres = this.DATABASE_TYPE === 'postgres';
+        const isMongo = this.DATABASE_TYPE === 'mongo';
+
+        const databaseDependencies = isPostgres ? `
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>` : isMongo ? `
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-mongodb</artifactId>
+        </dependency>` : '';
+
         const pomContent = `<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -96,11 +108,7 @@ export class BackendSpringbootCLI extends BaseCLI {
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
-        
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-jpa</artifactId>
-        </dependency>
+        ${databaseDependencies}
         
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -109,19 +117,13 @@ export class BackendSpringbootCLI extends BaseCLI {
         
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-security</artifactId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
         
         <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-        
-        <dependency>
-            <groupId>org.postgresql</groupId>
-            <artifactId>postgresql</artifactId>
-            <scope>runtime</scope>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>2.3.0</version>
         </dependency>
         
         <dependency>
@@ -135,15 +137,10 @@ export class BackendSpringbootCLI extends BaseCLI {
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
-        
-        <dependency>
-            <groupId>org.springframework.security</groupId>
-            <artifactId>spring-security-test</artifactId>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
     
     <build>
+        <finalName>app</finalName>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
@@ -167,25 +164,44 @@ export class BackendSpringbootCLI extends BaseCLI {
     }
 
     private generateApplicationProperties(): void {
-        const propertiesContent = `# Application
-spring.application.name=${this.projectNameBE}
-server.port=8080
+        const isPostgres = this.DATABASE_TYPE === 'postgres';
+        const isMongo = this.DATABASE_TYPE === 'mongo';
 
-# Database Configuration (H2 for development)
-spring.datasource.url=jdbc:h2:mem:testdb
-spring.datasource.driverClassName=org.h2.Driver
-spring.datasource.username=sa
-spring.datasource.password=
+        let databaseConfig = '';
+
+        if (isPostgres) {
+            const dbHost = this.DATABASE_HOST;
+            const dbPort = this.DATABASE_PORT;
+            const dbName = this.DATABASE_NAME;
+            const dbUser = this.DATABASE_USR;
+            const dbPassword = this.DATABASE_PASSWORD;
+
+            databaseConfig = `# PostgreSQL Database Configuration
+spring.datasource.url=jdbc:postgresql://${dbHost}:${dbPort}/${dbName}
+spring.datasource.username=${dbUser}
+spring.datasource.password=${dbPassword}
+spring.datasource.driver-class-name=org.postgresql.Driver
 
 # JPA Configuration
-spring.jpa.database-platform=org.hibernate.dialect.H2Dialect
+spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
 spring.jpa.hibernate.ddl-auto=update
 spring.jpa.show-sql=true
 spring.jpa.properties.hibernate.format_sql=true
+spring.jpa.properties.hibernate.jdbc.lob.non_contextual_creation=true`;
+        } else if (isMongo) {
+            const mongoUri = this.DATABASE_URI || 'mongodb://localhost:27017';
+            const dbName = this.DATABASE_NAME || 'database';
 
-# H2 Console
-spring.h2.console.enabled=true
-spring.h2.console.path=/h2-console
+            databaseConfig = `# MongoDB Database Configuration
+spring.data.mongodb.uri=${mongoUri}
+spring.data.mongodb.database=${dbName}`;
+        }
+
+        const propertiesContent = `# Application
+spring.application.name=${this.projectNameBE}
+server.port=${this.BACKEND_PORT}
+
+${databaseConfig}
 
 # Logging
 logging.level.root=INFO
@@ -200,7 +216,7 @@ logging.level.com.example.${this.projectNameBE.toLowerCase()}=DEBUG`;
     private generateMainApplication(): void {
         const className = this.capitalizeFirstLetter(this.projectNameBE) + 'Application';
         const packageName = `com.example.${this.projectNameBE.toLowerCase()}`;
-        
+
         const mainClassContent = `package ${packageName};
 
 import org.springframework.boot.SpringApplication;
@@ -222,9 +238,12 @@ public class ${className} {
     private generateSampleFiles(): void {
         const packageName = `com.example.${this.projectNameBE.toLowerCase()}`;
         const javaPath = path.join(this.backendPath, 'src', 'main', 'java', 'com', 'example', this.projectNameBE.toLowerCase());
+        const isPostgres = this.DATABASE_TYPE === 'postgres';
+        const isMongo = this.DATABASE_TYPE === 'mongo';
 
-        // Model
-        const userModelContent = `package ${packageName}.model;
+        if (isPostgres) {
+            // Model per PostgreSQL (JPA)
+            const userModelContent = `package ${packageName}.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
@@ -249,10 +268,10 @@ public class User {
     
     private String password;
 }`;
-        fs.writeFileSync(path.join(javaPath, 'model', 'User.java'), userModelContent);
+            fs.writeFileSync(path.join(javaPath, 'model', 'User.java'), userModelContent);
 
-        // Repository
-        const userRepositoryContent = `package ${packageName}.repository;
+            // Repository per PostgreSQL (JPA)
+            const userRepositoryContent = `package ${packageName}.repository;
 
 import ${packageName}.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -264,9 +283,54 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByUsername(String username);
     Optional<User> findByEmail(String email);
 }`;
-        fs.writeFileSync(path.join(javaPath, 'repository', 'UserRepository.java'), userRepositoryContent);
+            fs.writeFileSync(path.join(javaPath, 'repository', 'UserRepository.java'), userRepositoryContent);
 
-        // Service
+        } else if (isMongo) {
+            // Model per MongoDB
+            const userModelContent = `package ${packageName}.model;
+
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.index.Indexed;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+
+@Document(collection = "users")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class User {
+    @Id
+    private String id;
+    
+    @Indexed(unique = true)
+    private String username;
+    
+    private String email;
+    
+    private String password;
+}`;
+            fs.writeFileSync(path.join(javaPath, 'model', 'User.java'), userModelContent);
+
+            // Repository per MongoDB
+            const userRepositoryContent = `package ${packageName}.repository;
+
+import ${packageName}.model.User;
+import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.stereotype.Repository;
+import java.util.Optional;
+
+@Repository
+public interface UserRepository extends MongoRepository<User, String> {
+    Optional<User> findByUsername(String username);
+    Optional<User> findByEmail(String email);
+}`;
+            fs.writeFileSync(path.join(javaPath, 'repository', 'UserRepository.java'), userRepositoryContent);
+        }
+
+        // Service (uguale per entrambi i database, ma cambia il tipo ID)
+        const idType = isPostgres ? 'Long' : 'String';
         const userServiceContent = `package ${packageName}.service;
 
 import ${packageName}.model.User;
@@ -285,7 +349,7 @@ public class UserService {
         return userRepository.findAll();
     }
     
-    public Optional<User> getUserById(Long id) {
+    public Optional<User> getUserById(${idType} id) {
         return userRepository.findById(id);
     }
     
@@ -293,7 +357,7 @@ public class UserService {
         return userRepository.save(user);
     }
     
-    public User updateUser(Long id, User userDetails) {
+    public User updateUser(${idType} id, User userDetails) {
         User user = userRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("User not found"));
         user.setUsername(userDetails.getUsername());
@@ -301,13 +365,14 @@ public class UserService {
         return userRepository.save(user);
     }
     
-    public void deleteUser(Long id) {
+    public void deleteUser(${idType} id) {
         userRepository.deleteById(id);
     }
 }`;
         fs.writeFileSync(path.join(javaPath, 'service', 'UserService.java'), userServiceContent);
 
-        // Controller
+        // Controller (cambia il tipo del PathVariable)
+        const pathVariableType = isPostgres ? 'Long' : 'String';
         const userControllerContent = `package ${packageName}.controller;
 
 import ${packageName}.model.User;
@@ -331,7 +396,7 @@ public class UserController {
     }
     
     @GetMapping("/{id}")
-    public ResponseEntity<User> getUserById(@PathVariable Long id) {
+    public ResponseEntity<User> getUserById(@PathVariable ${pathVariableType} id) {
         return userService.getUserById(id)
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
@@ -343,7 +408,7 @@ public class UserController {
     }
     
     @PutMapping("/{id}")
-    public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestBody User user) {
+    public ResponseEntity<User> updateUser(@PathVariable ${pathVariableType} id, @RequestBody User user) {
         try {
             return ResponseEntity.ok(userService.updateUser(id, user));
         } catch (RuntimeException e) {
@@ -352,7 +417,7 @@ public class UserController {
     }
     
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteUser(@PathVariable ${pathVariableType} id) {
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();
     }
@@ -410,27 +475,98 @@ build/
         return str.charAt(0).toUpperCase() + str.slice(1);
     }
 
+    private generateSwaggerConfig(): void {
+        const packageName = `com.example.${this.projectNameBE.toLowerCase()}`;
+        const javaPath = path.join(this.backendPath, 'src', 'main', 'java', 'com', 'example', this.projectNameBE.toLowerCase());
+
+        const swaggerConfigContent = `package ${packageName}.config;
+
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.info.Contact;
+import io.swagger.v3.oas.models.info.License;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class OpenApiConfig {
+    
+    @Bean
+    public OpenAPI customOpenAPI() {
+        return new OpenAPI()
+            .info(new Info()
+                .title("${this.projectNameBE} API")
+                .version("1.0.0")
+                .description("API documentation for ${this.projectNameBE}")
+                .contact(new Contact()
+                    .name("API Support")
+                    .email("support@example.com"))
+                .license(new License()
+                    .name("Apache 2.0")
+                    .url("https://www.apache.org/licenses/LICENSE-2.0.html")));
+    }
+}`;
+
+        fs.writeFileSync(path.join(javaPath, 'config', 'OpenApiConfig.java'), swaggerConfigContent);
+        logger.info('Created Swagger configuration');
+    }
+
+    private generateBanner(): void {
+        const bannerContent = `
+   _____ _____  _____  _____ _   _  _____   ____   ____   ____ _______ 
+  / ____|  __ \\|  __ \\|_   _| \\ | |/ ____| |  _ \\ / __ \\ / __ \\__   __|
+ | (___ | |__) | |__) | | | |  \\| | |  __  | |_) | |  | | |  | | | |   
+  \\___ \\|  ___/|  _  /  | | | . \` | | |_ | |  _ <| |  | | |  | | | |   
+  ____) | |    | | \\ \\ _| |_| |\\  | |__| | | |_) | |__| | |__| | | |   
+ |_____/|_|    |_|  \\_\\_____|_| \\_|\\_____| |____/ \\____/ \\____/  |_|   
+                                                                        
+ :: ${this.projectNameBE} :: Spring Boot :: (v3.2.0)
+`;
+
+        const resourcesPath = path.join(this.backendPath, 'src', 'main', 'resources');
+        const bannerPath = path.join(resourcesPath, 'banner.txt');
+        fs.writeFileSync(bannerPath, bannerContent);
+        logger.info('Created custom banner.txt');
+    }
+
     public generate(): void {
         logger.info(`Generating Spring Boot backend: ${this.projectNameBE}`);
-        
+
         try {
             // Create the folder structure
             this.generateFolder();
-            
+
             // Generate configuration files
             this.generatePomXml();
             this.generateApplicationProperties();
+            this.generateSwaggerConfig();
             this.generateMainApplication();
             this.generateSampleFiles();
             this.generateGitignore();
-            
+            this.generateBanner();
+
+            const isPostgres = this.DATABASE_TYPE === 'postgres';
+            const isMongo = this.DATABASE_TYPE === 'mongo';
+
             logger.info('Spring Boot backend generated successfully!');
             logger.info(`To run the project:`);
             logger.info(`  cd ${this.backendPath}`);
             logger.info(`  mvn spring-boot:run`);
-            logger.info(`The API will be available at http://localhost:8080`);
-            logger.info(`H2 Console: http://localhost:8080/h2-console`);
-            
+            logger.info(`\nThe API will be available at http://localhost:${this.BACKEND_PORT}`);
+            logger.info(`Swagger UI: http://localhost:${this.BACKEND_PORT}/swagger-ui.html`);
+            logger.info(`API Docs: http://localhost:${this.BACKEND_PORT}/api-docs`);
+            logger.info(`Health Check: http://localhost:${this.BACKEND_PORT}/actuator/health`);
+
+            if (isPostgres) {
+                const dbHost = this.DATABASE_HOST;
+                const dbPort = this.DATABASE_PORT;
+                const dbName = this.DATABASE_NAME;
+                logger.info(`\nPostgreSQL Database: ${dbHost}:${dbPort}/${dbName}`);
+            } else if (isMongo) {
+                const dbName = this.DATABASE_NAME || 'database';
+                logger.info(`\nMongoDB Database: ${dbName}`);
+            }
+
         } catch (error) {
             logger.error('Error generating Spring Boot backend:', error);
             throw error;
