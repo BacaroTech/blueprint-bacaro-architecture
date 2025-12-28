@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import dotenv from "dotenv";
 import logger from 'winston';
+import { error } from "console";
 
 dotenv.config();
 
@@ -31,7 +32,7 @@ export class BackendNodeCLI extends BaseCLI {
 
     if (!fs.existsSync(root)) {
       logger.error('Target folder does not exist:', root);
-      return;
+      throw new Error();
     }
 
     const folders = ['config', 'database', 'routes', 'utils', 'middleware', 'models', 'controllers', 'helpers', 'views'];
@@ -147,7 +148,28 @@ const swaggerOptions = {
       {
         url: 'http://localhost:' + port
       }
-    ]
+    ],
+    components: {
+      schemas: {
+        User: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            name: { type: 'string' },
+            email: { type: 'string' },
+            created_at: { type: 'string', format: 'date-time' }
+          }
+        },
+        UserInput: {
+          type: 'object',
+          required: ['name', 'email'],
+          properties: {
+            name: { type: 'string' },
+            email: { type: 'string' }
+          }
+        }
+      }
+    }
   },
   apis: ['./src/routes/*.ts', './src/index.ts'],
 };
@@ -183,8 +205,256 @@ app.get('/', async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /api/users:
+ *   get:
+ *     summary: Get all users
+ *     tags: [Users]
+ *     responses:
+ *       200:
+ *         description: List of users
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/User'
+ */
+app.get('/api/users', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM users ORDER BY id ASC');
+    logger.info('Retrieved ' + result.rows.length + ' users');
+    res.json(result.rows);
+  } catch (err: any) {
+    logger.error('Error fetching users:', err);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch users',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  }
+});
+
+/**
+ * @openapi
+ * /api/users/{id}:
+ *   get:
+ *     summary: Get a user by ID
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: User found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       404:
+ *         description: User not found
+ */
+app.get('/api/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+    
+    if (result.rows.length === 0) {
+      logger.warn('User not found with id: ' + id);
+      return res.status(404).json({
+        status: 'error',
+        message: 'User not found'
+      });
+    }
+    
+    logger.info('Retrieved user with id: ' + id);
+    res.json(result.rows[0]);
+  } catch (err: any) {
+    logger.error('Error fetching user:', err);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch user',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  }
+});
+
+/**
+ * @openapi
+ * /api/users:
+ *   post:
+ *     summary: Create a new user
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/UserInput'
+ *     responses:
+ *       201:
+ *         description: User created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ */
+app.post('/api/users', async (req, res) => {
+  try {
+    const { name, email } = req.body;
+    
+    if (!name || !email) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Name and email are required'
+      });
+    }
+    
+    const result = await pool.query(
+      'INSERT INTO users (name, email, created_at) VALUES ($1, $2, NOW()) RETURNING *',
+      [name, email]
+    );
+    
+    logger.info('Created new user with id: ' + result.rows[0].id);
+    res.status(201).json(result.rows[0]);
+  } catch (err: any) {
+    logger.error('Error creating user:', err);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to create user',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  }
+});
+
+/**
+ * @openapi
+ * /api/users/{id}:
+ *   put:
+ *     summary: Update a user
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/UserInput'
+ *     responses:
+ *       200:
+ *         description: User updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       404:
+ *         description: User not found
+ */
+app.put('/api/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, email } = req.body;
+    
+    if (!name || !email) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Name and email are required'
+      });
+    }
+    
+    const result = await pool.query(
+      'UPDATE users SET name = $1, email = $2 WHERE id = $3 RETURNING *',
+      [name, email, id]
+    );
+    
+    if (result.rows.length === 0) {
+      logger.warn('User not found for update with id: ' + id);
+      return res.status(404).json({
+        status: 'error',
+        message: 'User not found'
+      });
+    }
+    
+    logger.info('Updated user with id: ' + id);
+    res.json(result.rows[0]);
+  } catch (err: any) {
+    logger.error('Error updating user:', err);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to update user',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  }
+});
+
+/**
+ * @openapi
+ * /api/users/{id}:
+ *   delete:
+ *     summary: Delete a user
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: User deleted
+ *       404:
+ *         description: User not found
+ */
+app.delete('/api/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query('DELETE FROM users WHERE id = $1 RETURNING id', [id]);
+    
+    if (result.rows.length === 0) {
+      logger.warn('User not found for deletion with id: ' + id);
+      return res.status(404).json({
+        status: 'error',
+        message: 'User not found'
+      });
+    }
+    
+    logger.info('Deleted user with id: ' + id);
+    res.json({
+      status: 'success',
+      message: 'User deleted successfully'
+    });
+  } catch (err: any) {
+    logger.error('Error deleting user:', err);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to delete user',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  }
+});
+
 pool.connect()
-  .then(() => {
+  .then(async () => {
+    // Create users table if it doesn't exist
+    await pool.query(\`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL UNIQUE,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    \`);
+    logger.info('Users table ready');
+    
     app.listen(port, () => {
       logger.info('Server running on http://localhost:' + port);
       logger.info('Swagger docs available at http://localhost:' + port + '/api-docs');
@@ -236,7 +506,7 @@ const app = express();
 const port = process.env.PORT || ${this.BACKEND_PORT};
 
 // Validate required environment variables
-const requiredEnvVars = ['MONGO_URI'];
+const requiredEnvVars = ['DATABASE_URI'];
 for (const envVar of requiredEnvVars) {
   if (!process.env[envVar]) {
     logger.error('Missing required environment variable: ' + envVar);
@@ -244,7 +514,7 @@ for (const envVar of requiredEnvVars) {
   }
 }
 
-const mongoUri = process.env.MONGO_URI!;
+const mongoUri = process.env.DATABASE_URI!;
 app.use(cors());
 app.use(express.json());
 
@@ -264,7 +534,29 @@ const swaggerOptions = {
       {
         url: 'http://localhost:' + port
       }
-    ]
+    ],
+    components: {
+      schemas: {
+        User: {
+          type: 'object',
+          properties: {
+            _id: { type: 'string' },
+            name: { type: 'string' },
+            email: { type: 'string' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' }
+          }
+        },
+        UserInput: {
+          type: 'object',
+          required: ['name', 'email'],
+          properties: {
+            name: { type: 'string' },
+            email: { type: 'string' }
+          }
+        }
+      }
+    }
   },
   apis: ['./src/routes/*.ts', './src/index.ts'],
 };
@@ -272,11 +564,12 @@ const swaggerOptions = {
 const swaggerDocs = swaggerJsDoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
-// Example schema
+// User schema with timestamps
 const userSchema = new mongoose.Schema({
-  name: String,
-  email: String
-});
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true }
+}, { timestamps: true });
+
 const User = mongoose.model('User', userSchema);
 
 /**
@@ -299,6 +592,281 @@ app.get('/', async (req, res) => {
     message: 'Mongoose is ' + status,
     timestamp: new Date().toISOString()
   });
+});
+
+/**
+ * @openapi
+ * /api/users:
+ *   get:
+ *     summary: Get all users
+ *     tags: [Users]
+ *     responses:
+ *       200:
+ *         description: List of users
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/User'
+ */
+app.get('/api/users', async (req, res) => {
+  try {
+    const users = await User.find().sort({ createdAt: -1 });
+    logger.info('Retrieved ' + users.length + ' users');
+    res.json(users);
+  } catch (err: any) {
+    logger.error('Error fetching users:', err);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch users',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  }
+});
+
+/**
+ * @openapi
+ * /api/users/{id}:
+ *   get:
+ *     summary: Get a user by ID
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: User found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       404:
+ *         description: User not found
+ */
+app.get('/api/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid user ID'
+      });
+    }
+    
+    const user = await User.findById(id);
+    
+    if (!user) {
+      logger.warn('User not found with id: ' + id);
+      return res.status(404).json({
+        status: 'error',
+        message: 'User not found'
+      });
+    }
+    
+    logger.info('Retrieved user with id: ' + id);
+    res.json(user);
+  } catch (err: any) {
+    logger.error('Error fetching user:', err);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch user',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  }
+});
+
+/**
+ * @openapi
+ * /api/users:
+ *   post:
+ *     summary: Create a new user
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/UserInput'
+ *     responses:
+ *       201:
+ *         description: User created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ */
+app.post('/api/users', async (req, res) => {
+  try {
+    const { name, email } = req.body;
+    
+    if (!name || !email) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Name and email are required'
+      });
+    }
+    
+    const user = new User({ name, email });
+    await user.save();
+    
+    logger.info('Created new user with id: ' + user._id);
+    res.status(201).json(user);
+  } catch (err: any) {
+    logger.error('Error creating user:', err);
+    
+    if (err.code === 11000) {
+      return res.status(409).json({
+        status: 'error',
+        message: 'Email already exists'
+      });
+    }
+    
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to create user',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  }
+});
+
+/**
+ * @openapi
+ * /api/users/{id}:
+ *   put:
+ *     summary: Update a user
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/UserInput'
+ *     responses:
+ *       200:
+ *         description: User updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       404:
+ *         description: User not found
+ */
+app.put('/api/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, email } = req.body;
+    
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid user ID'
+      });
+    }
+    
+    if (!name || !email) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Name and email are required'
+      });
+    }
+    
+    const user = await User.findByIdAndUpdate(
+      id,
+      { name, email },
+      { new: true, runValidators: true }
+    );
+    
+    if (!user) {
+      logger.warn('User not found for update with id: ' + id);
+      return res.status(404).json({
+        status: 'error',
+        message: 'User not found'
+      });
+    }
+    
+    logger.info('Updated user with id: ' + id);
+    res.json(user);
+  } catch (err: any) {
+    logger.error('Error updating user:', err);
+    
+    if (err.code === 11000) {
+      return res.status(409).json({
+        status: 'error',
+        message: 'Email already exists'
+      });
+    }
+    
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to update user',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  }
+});
+
+/**
+ * @openapi
+ * /api/users/{id}:
+ *   delete:
+ *     summary: Delete a user
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: User deleted
+ *       404:
+ *         description: User not found
+ */
+app.delete('/api/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid user ID'
+      });
+    }
+    
+    const user = await User.findByIdAndDelete(id);
+    
+    if (!user) {
+      logger.warn('User not found for deletion with id: ' + id);
+      return res.status(404).json({
+        status: 'error',
+        message: 'User not found'
+      });
+    }
+    
+    logger.info('Deleted user with id: ' + id);
+    res.json({
+      status: 'success',
+      message: 'User deleted successfully'
+    });
+  } catch (err: any) {
+    logger.error('Error deleting user:', err);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to delete user',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  }
 });
 
 mongoose.connect(mongoUri)
@@ -333,8 +901,7 @@ process.on('unhandledRejection', (err: Error) => {
 process.on('uncaughtException', (err: Error) => {
   logger.error('Uncaught exception:', err);
   process.exit(1);
-});
-`.trim();
+});`.trim();
   }
 
   private getServerCode(): string {
@@ -343,20 +910,15 @@ process.on('uncaughtException', (err: Error) => {
 
   private writeEnvFile() {
     //load configuration for database
-    let envFileContent: string = this.DATABASE_TYPE === "Mongo" ?
-      `MONGO_URI=${this.DATABASE_URI}
-MONGO_DB_NAME=${this.DATABASE_NAME}`
-      :
-      `DATABASE_PORT=${this.DATABASE_PORT}
+    let envFileContent: string = 
+`DATABASE_PORT=${this.DATABASE_PORT}
 DATABASE_USR=${this.DATABASE_USR}
 DATABASE_PASSWORD=${this.DATABASE_PASSWORD}
 DATABASE_NAME=${this.DATABASE_NAME}
-DATABASE_HOST=${this.DATABASE_HOST}`;
-
-    //common configuration
-    envFileContent +=
-      `\nBACKEND_PORT=${this.BACKEND_PORT}
-LOG_LEVEL=${this.LOG_LEVEL}`;
+DATABASE_URI=${this.DATABASE_URI}
+DATABASE_HOST=${this.DATABASE_HOST}
+BACKEND_PORT=${this.BACKEND_PORT}
+LOG_LEVEL=${this.LOG_LEVEL}`.trim();
 
     fs.writeFileSync(path.join(this.backendPath, '.env'), envFileContent);
   }
@@ -371,7 +933,7 @@ Logs are stored in the \`logs\` directory with the following files:
 - \`combined.log\`: All logs
 - \`exceptions.log\`: Uncaught exceptions
 
-Log level can be configured via the \`LOG_LEVEL\` environment variable (debug, info, warn, error)`.trim()
+Log level can be configured via the \`LOG_LEVEL\` environment variable (debug, info, warn, error)`.trim();
 
     fs.writeFileSync(path.join(this.backendPath, 'README.md'), readMeContet);
   }
@@ -385,21 +947,21 @@ logs`.trim();
     fs.writeFileSync(path.join(this.backendPath, '.gitignore'), gitIngoreContent);
   }
 
-  private writeTSconfigJson(){
+  private writeTSconfigJson() {
     const gitIngoreContent: string = `
-{
-  "compilerOptions": {
-    "target": "es2017",
-    "module": "commonjs",
-    "moduleResolution": "node",
-    "rootDir": "src",
-    "outDir": "dist",
-    "esModuleInterop": true,
-    "strict": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
-  }
-}`;
+    {
+      "compilerOptions": {
+        "target": "es2017",
+        "module": "commonjs",
+        "moduleResolution": "node",
+        "rootDir": "src",
+        "outDir": "dist",
+        "esModuleInterop": true,
+        "strict": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true
+      }
+    }`.trim();
     fs.writeFileSync(path.join(this.backendPath, 'tsconfig.json'), gitIngoreContent);
   }
 
@@ -447,11 +1009,11 @@ logs`.trim();
     if (!fs.existsSync(typesDir)) {
       fs.mkdirSync(typesDir, { recursive: true });
     }
-    const typeDeclaration = `declare module 'swagger-jsdoc' {
-    const swaggerJsDoc: any;
-    export default swaggerJsDoc;
-  }
-  `;
+    const typeDeclaration = 
+    `declare module 'swagger-jsdoc' {
+      const swaggerJsDoc: any;
+      export default swaggerJsDoc;
+    }`.trim();
     fs.writeFileSync(path.join(typesDir, 'swagger-jsdoc.d.ts'), typeDeclaration);
 
     // Create logs directory

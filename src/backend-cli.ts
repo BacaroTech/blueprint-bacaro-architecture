@@ -3,7 +3,6 @@ import dotenv from "dotenv";
 import logger from 'winston';
 import { BackendSpringbootCLI } from "./backend-springboot-cli";
 import { BackendNodeCLI } from "./backend-node-cli";
-import { error } from "console";
 
 dotenv.config();
 
@@ -40,7 +39,7 @@ export class BackendCLI extends BaseCLI {
             }
             default: {
                 logger.error("BE not recognize");
-                throw error;
+                throw new Error();
             }
         }
     }

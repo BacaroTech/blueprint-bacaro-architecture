@@ -69,7 +69,7 @@ export class DictionaryCLI {
 
         if (!value) {
             logger.error(`Missing required environment variable: ${key}`);
-            throw new Error()
+            throw new Error();
         }
 
         return value;

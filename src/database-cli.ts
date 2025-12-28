@@ -15,19 +15,19 @@ export class DatabaseCLI extends BaseCLI {
   private generatePostgress(): string {
     return `
   ${this.PROJECT_NAME_TOLOWER}-db:
-      container_name: ${this.PROJECT_NAME}-db
-      image: postgres:13
-      environment:
-        POSTGRES_PASSWORD: ${this.DATABASE_PASSWORD}
-        POSTGRES_USER: ${this.DATABASE_USR}
-        POSTGRES_DB: ${this.DATABASE_NAME}
-      ports:
-        - "${this.DATABASE_PORT}:5432"
-      volumes:
-        - ${this.PROJECT_NAME_TOLOWER}-db-data:/var/lib/postgresql/data
-      networks:
-        - ${this.PROJECT_NAME_TOLOWER}-network
-      restart: unless-stopped 
+    container_name: ${this.PROJECT_NAME}-db
+    image: postgres:13
+    environment:
+      POSTGRES_PASSWORD: ${this.DATABASE_PASSWORD}
+      POSTGRES_USER: ${this.DATABASE_USR}
+      POSTGRES_DB: ${this.DATABASE_NAME}
+    ports:
+      - "${this.DATABASE_PORT}:5432"
+    volumes:
+      - ${this.PROJECT_NAME_TOLOWER}-db-data:/var/lib/postgresql/data
+    networks:
+      - ${this.PROJECT_NAME_TOLOWER}-network
+    restart: unless-stopped 
 `;
   }
 

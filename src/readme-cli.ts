@@ -15,7 +15,7 @@ export class ReadMeCLI extends BaseCLI {
   }
 
   private docByBackend(): string {
-    switch(this.BACKEND_TYPE){
+    switch (this.BACKEND_TYPE) {
       case 'node':
         return "Node express: [Link alla documentazione](https://nodejs.org/docs/latest/api/)"
       case 'springboot':
@@ -26,7 +26,7 @@ export class ReadMeCLI extends BaseCLI {
   }
 
   private docByDB(): string {
-    switch(this.DATABASE_TYPE){
+    switch (this.DATABASE_TYPE) {
       case 'postgress':
         return "Postgres: [Link alla documentazione](https://node-postgres.com/)"
       case 'mongo':
@@ -37,8 +37,8 @@ export class ReadMeCLI extends BaseCLI {
   }
 
   public generate(): void {
-    const readmeContent = 
-`# ${this.PROJECT_NAME}
+    const readmeContent =
+      `# ${this.PROJECT_NAME}
 ${this.PROJECT_DESCRIPTION}
 
 ## Useful documentation
@@ -53,12 +53,13 @@ ${this.docByDB()}
 
 This repository is a result of the BacaroTech CLI
 
-Learn more about this repo: [Link to the repo](https://github.com/BacaroTech/blueprint-bacaro-architecture)`;
+Learn more about this repo: [Link to the repo](https://github.com/BacaroTech/blueprint-bacaro-architecture)`.trim();
     try {
       fs.writeFileSync(path.join(this.projectRoot, "README.md"), readmeContent, "utf-8");
       logger.info("README generated successfully");
     } catch (error) {
       logger.error("Error generating README:", error);
+      throw new Error();
     }
   }
 }

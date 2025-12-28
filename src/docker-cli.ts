@@ -24,6 +24,11 @@ export class DockerCLI extends BaseCLI {
   }
 
   private generateBackendService(): string {
+    const isNode = process.env.BACKEND_TYPE === 'node';
+    return isNode ? this.generateNodeBackendService() : this.generateSpringBootBackendService();
+  }
+
+  private generateNodeBackendService(): string {
     return `
   ${this.PROJECT_NAME_TOLOWER}-be:
     build:
@@ -36,6 +41,25 @@ export class DockerCLI extends BaseCLI {
     networks:
       - ${this.PROJECT_NAME_TOLOWER}-network
     restart: unless-stopped`;
+  }
+
+  private generateSpringBootBackendService(): string {
+    return `
+  ${this.PROJECT_NAME_TOLOWER}-be:
+    build:
+      context: ./${this.PROJECT_NAME}BE
+      dockerfile: Dockerfile
+    ports:
+      - "${this.BACKEND_PORT}:${this.BACKEND_PORT}"
+    volumes:
+      - "./${this.PROJECT_NAME}BE/target:/app/target"
+      - "./${this.PROJECT_NAME}BE/src:/app/src"
+      - maven-cache:/root/.m2
+    networks:
+      - ${this.PROJECT_NAME_TOLOWER}-network
+    restart: unless-stopped
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev`;
   }
 
   private generateVolumes(): string {
@@ -92,11 +116,10 @@ COPY .env .env
 EXPOSE 4000
 
 # Final command
-CMD ["node", "dist/index.js"]
-`
+CMD ["node", "dist/index.js"]`;
   }
 
-private generateDockerFileSpringBE(): string {
+  private generateDockerFileSpringBE(): string {
     return `# Stage 1: Build
 FROM maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /app
@@ -127,7 +150,7 @@ EXPOSE ${this.BACKEND_PORT}
 
 # Run the application
 ENTRYPOINT ["java", "-jar", "app.jar"]`;
-}
+  }
 
   private writeDockerCompose() {
     try {
@@ -145,6 +168,7 @@ ENTRYPOINT ["java", "-jar", "app.jar"]`;
       logger.info(`Dockerfile generated at ${dockerComposePath}`);
     } catch (error: any) {
       logger.error(`Failed to generate docker-compose.yml: ${error.message || error}`);
+      throw new Error();
     }
   }
 
@@ -161,6 +185,7 @@ ENTRYPOINT ["java", "-jar", "app.jar"]`;
       logger.info(`Dockerfile generated at ${dockerFilePath}`);
     } catch (error: any) {
       logger.error(`Failed to generate Dockerfile: ${error.message || error}`);
+      throw new Error();
     }
   }
 

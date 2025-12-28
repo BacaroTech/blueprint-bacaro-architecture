@@ -156,7 +156,7 @@ export class BackendSpringbootCLI extends BaseCLI {
             </plugin>
         </plugins>
     </build>
-</project>`;
+</project>`.trim();
 
         const pomPath = path.join(this.backendPath, 'pom.xml');
         fs.writeFileSync(pomPath, pomContent);
@@ -187,14 +187,14 @@ spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
 spring.jpa.hibernate.ddl-auto=update
 spring.jpa.show-sql=true
 spring.jpa.properties.hibernate.format_sql=true
-spring.jpa.properties.hibernate.jdbc.lob.non_contextual_creation=true`;
+spring.jpa.properties.hibernate.jdbc.lob.non_contextual_creation=true`.trim();
         } else if (isMongo) {
             const mongoUri = this.DATABASE_URI || 'mongodb://localhost:27017';
             const dbName = this.DATABASE_NAME || 'database';
 
             databaseConfig = `# MongoDB Database Configuration
 spring.data.mongodb.uri=${mongoUri}
-spring.data.mongodb.database=${dbName}`;
+spring.data.mongodb.database=${dbName}`.trim();
         }
 
         const propertiesContent = `# Application
@@ -205,7 +205,7 @@ ${databaseConfig}
 
 # Logging
 logging.level.root=INFO
-logging.level.com.example.${this.projectNameBE.toLowerCase()}=DEBUG`;
+logging.level.com.example.${this.projectNameBE.toLowerCase()}=DEBUG`.trim();
 
         const resourcesPath = path.join(this.backendPath, 'src', 'main', 'resources');
         const propertiesPath = path.join(resourcesPath, 'application.properties');
@@ -227,7 +227,7 @@ public class ${className} {
     public static void main(String[] args) {
         SpringApplication.run(${className}.class, args);
     }
-}`;
+}`.trim();
 
         const javaPath = path.join(this.backendPath, 'src', 'main', 'java', 'com', 'example', this.projectNameBE.toLowerCase());
         const mainClassPath = path.join(javaPath, `${className}.java`);
@@ -267,7 +267,7 @@ public class User {
     private String email;
     
     private String password;
-}`;
+}`.trim();
             fs.writeFileSync(path.join(javaPath, 'model', 'User.java'), userModelContent);
 
             // Repository per PostgreSQL (JPA)
@@ -282,7 +282,7 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByUsername(String username);
     Optional<User> findByEmail(String email);
-}`;
+}`.trim();
             fs.writeFileSync(path.join(javaPath, 'repository', 'UserRepository.java'), userRepositoryContent);
 
         } else if (isMongo) {
@@ -325,7 +325,7 @@ import java.util.Optional;
 public interface UserRepository extends MongoRepository<User, String> {
     Optional<User> findByUsername(String username);
     Optional<User> findByEmail(String email);
-}`;
+}`.trim();
             fs.writeFileSync(path.join(javaPath, 'repository', 'UserRepository.java'), userRepositoryContent);
         }
 
@@ -368,7 +368,7 @@ public class UserService {
     public void deleteUser(${idType} id) {
         userRepository.deleteById(id);
     }
-}`;
+}`.trim();
         fs.writeFileSync(path.join(javaPath, 'service', 'UserService.java'), userServiceContent);
 
         // Controller (cambia il tipo del PathVariable)
@@ -421,7 +421,7 @@ public class UserController {
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();
     }
-}`;
+}`.trim();
         fs.writeFileSync(path.join(javaPath, 'controller', 'UserController.java'), userControllerContent);
 
         logger.info('Created sample files (User model, repository, service, controller)');
@@ -464,7 +464,7 @@ build/
 
 ### Environment ###
 .env
-.env.local`;
+.env.local`.trim();;
 
         const gitignorePath = path.join(this.backendPath, '.gitignore');
         fs.writeFileSync(gitignorePath, gitignoreContent);
@@ -505,7 +505,7 @@ public class OpenApiConfig {
                     .name("Apache 2.0")
                     .url("https://www.apache.org/licenses/LICENSE-2.0.html")));
     }
-}`;
+}`.trim();
 
         fs.writeFileSync(path.join(javaPath, 'config', 'OpenApiConfig.java'), swaggerConfigContent);
         logger.info('Created Swagger configuration');
@@ -552,7 +552,7 @@ public class OpenApiConfig {
             logger.info(`To run the project:`);
             logger.info(`  cd ${this.backendPath}`);
             logger.info(`  mvn spring-boot:run`);
-            logger.info(`\nThe API will be available at http://localhost:${this.BACKEND_PORT}`);
+            logger.info(`The API will be available at http://localhost:${this.BACKEND_PORT}`);
             logger.info(`Swagger UI: http://localhost:${this.BACKEND_PORT}/swagger-ui.html`);
             logger.info(`API Docs: http://localhost:${this.BACKEND_PORT}/api-docs`);
             logger.info(`Health Check: http://localhost:${this.BACKEND_PORT}/actuator/health`);
@@ -561,15 +561,15 @@ public class OpenApiConfig {
                 const dbHost = this.DATABASE_HOST;
                 const dbPort = this.DATABASE_PORT;
                 const dbName = this.DATABASE_NAME;
-                logger.info(`\nPostgreSQL Database: ${dbHost}:${dbPort}/${dbName}`);
+                logger.info(`PostgreSQL Database: ${dbHost}:${dbPort}/${dbName}`);
             } else if (isMongo) {
                 const dbName = this.DATABASE_NAME || 'database';
-                logger.info(`\nMongoDB Database: ${dbName}`);
+                logger.info(`MongoDB Database: ${dbName}`);
             }
 
         } catch (error) {
             logger.error('Error generating Spring Boot backend:', error);
-            throw error;
+            throw new Error();
         }
     }
 }

@@ -42,7 +42,7 @@ class BacaroCLI extends DictionaryCLI {
         const projectName = opts.name || this.PROJECT_NAME;
         if (!projectName) {
           logger.error('Project name is required! Set it in the .env file or pass it via CLI with -n.');
-          process.exit(1);
+          throw new Error();
         }
 
         const projectNameFE: string = `${projectName}FE`;
@@ -107,7 +107,7 @@ class BacaroCLI extends DictionaryCLI {
           logger.info(`${projectName} setup completed!`);
         } catch (error: any) {
           logger.error('Error during project setup:', error.message || error);
-          process.exit(1);
+          throw new Error();
         }
       });
 

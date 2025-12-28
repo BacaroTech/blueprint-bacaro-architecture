@@ -111,7 +111,7 @@ export const environment = {
     const filePath = path.join(this.frontendPath, 'src', 'app', 'app.component.ts');
     const content = `
 import { Component, OnInit } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 
 @Component({
   selector: 'app-root',
@@ -132,13 +132,13 @@ export class AppComponent implements OnInit {
 
   fetchData(): void {
     this.loading = true;
-    this.http.get('http://localhost:${this.BACKEND_PORT}').subscribe({
-      next: (response) => {
+    this.http.get('http://localhost:${this.BACKEND_PORT}/api/users').subscribe({
+      next: (response: any) => {
         this.data = response;
         this.loading = false;
         console.log('Fetched data from backend:', response);
       },
-      error: (err) => {
+      error: (err: HttpErrorResponse) => {
         this.error = 'API Error';
         this.loading = false;
         console.error('Error fetching data:', err);
@@ -278,7 +278,7 @@ export class HttpInterceptorService implements HttpInterceptor {
 
     if (!angularJson.projects[`${this.PROJECT_NAME}FE`]) {
       logger.error('Project name mismatch in angular.json');
-      process.exit(1);
+      throw new Error();
     }
 
     angularJson.projects[`${this.PROJECT_NAME}FE`].architect.build.options.styles.push('node_modules/bootstrap/dist/css/bootstrap.min.css');
