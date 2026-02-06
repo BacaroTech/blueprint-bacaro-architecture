@@ -1,10 +1,27 @@
-export class BaseCLI{
+import { DictionaryCLI } from "./dictionary-cli"
+
+/**
+ * Base class that all generators must extend
+ */
+export class BaseCLI extends DictionaryCLI {
+    /**
+     * Generate subproject
+     */
     public generate(): void{
-        //to implement into sub classes
+        throw new Error
     }
 
+    /**
+     * Generate subproject aux
+     */
     public auxGenerate(): string {
-       //to implement into sub classes 
        throw new Error
+    }
+
+    /**
+     * Generate folder structure
+     */
+    protected generateFolder(): void{
+        throw new Error
     }
 }

@@ -4,58 +4,44 @@ import dotenv from "dotenv";
 dotenv.config();
 
 export class DatabaseCLI extends BaseCLI {
-  private projectRoot: string;
-
-  private projectName: string;
-  private dbType: string;
-  private dbPort: string;
-  private dbUser?: string;
-  private dbPassword?: string;
-  private dbName?: string;
+  private readonly projectRoot: string;
+  private readonly PROJECT_NAME_TOLOWER: string = this.PROJECT_NAME.toLocaleLowerCase() ?? '';
 
   constructor(projectRoot: string) {
     super();
     this.projectRoot = projectRoot;
-
-    // load values from .env file
-    this.projectName = process.env.PROJECT_NAME?.toLocaleLowerCase() ?? "project";
-    this.dbType = process.env.DATABASE_TYPE ?? "";
-    this.dbPort = process.env.DATABASE_PORT ?? "";
-    this.dbUser = process.env.DATABASE_USR;
-    this.dbPassword = process.env.DATABASE_PASSWORD;
-    this.dbName = process.env.DATABASE_NAME;
   }
 
   private generatePostgress(): string {
     return `
-  ${this.projectName}-db:
-      container_name: ${this.projectName}-db
-      image: postgres:13
-      environment:
-        POSTGRES_PASSWORD: ${this.dbPassword}
-        POSTGRES_USER: ${this.dbUser}
-        POSTGRES_DB: ${this.dbName}
-      ports:
-        - "${this.dbPort}:5432"
-      volumes:
-        - ${this.projectName}-db-data:/var/lib/postgresql/data
-      networks:
-        - ${this.projectName}-network
-      restart: unless-stopped 
+  ${this.PROJECT_NAME_TOLOWER}-db:
+    container_name: ${this.PROJECT_NAME}-db
+    image: postgres:13
+    environment:
+      POSTGRES_PASSWORD: ${this.DATABASE_PASSWORD}
+      POSTGRES_USER: ${this.DATABASE_USR}
+      POSTGRES_DB: ${this.DATABASE_NAME}
+    ports:
+      - "${this.DATABASE_PORT}:5432"
+    volumes:
+      - ${this.PROJECT_NAME_TOLOWER}-db-data:/var/lib/postgresql/data
+    networks:
+      - ${this.PROJECT_NAME_TOLOWER}-network
+    restart: unless-stopped 
 `;
   }
 
   private generateMongo(): string {
     return `
-  ${this.projectName}db:
-      container_name: ${this.projectName}db
+  ${this.PROJECT_NAME_TOLOWER}-db:
+      container_name: ${this.PROJECT_NAME}db
       image: mongo:6.0
       ports:
-        - "${this.dbPort}:27017"
+        - "${this.DATABASE_PORT}:27017"
       volumes:
-        - ${this.projectName}-db-data:/data/db
+        - ${this.PROJECT_NAME_TOLOWER}-db-data:/data/db
       networks:
-        - ${this.projectName}-network
+        - ${this.PROJECT_NAME_TOLOWER}-network
       restart: unless-stopped
       healthcheck:
         test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
@@ -66,13 +52,13 @@ export class DatabaseCLI extends BaseCLI {
   }
 
   public auxGenerate(): string {
-    switch (this.dbType.toLowerCase()) {
+    switch (this.DATABASE_TYPE.toLowerCase()) {
       case "postgres":
         return this.generatePostgress();
       case "mongo":
         return this.generateMongo();
       default:
-        throw new Error(`Database type "${this.dbType}" not supported.`);
+        throw new Error(`Database type "${this.DATABASE_TYPE}" not supported.`);
     }
   }
 }

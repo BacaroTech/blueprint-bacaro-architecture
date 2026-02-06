@@ -7,45 +7,61 @@ import logger from "winston";
 dotenv.config();
 
 export class ReadMeCLI extends BaseCLI {
-  private projectRoot: string;
-  private projectName: string;
-  private projectDescription: string;
-  private angularVersion: string;
+  private readonly projectRoot: string;
 
   constructor(projectRoot: string) {
     super();
     this.projectRoot = projectRoot;
+  }
 
-    // load values from .env file
-    this.projectName = process.env.PROJECT_NAME ?? "Project Name";
-    this.projectDescription = process.env.PROJECT_DESCRIPTION ?? "Project description not provided.";
-    this.angularVersion = process.env.ANGULAR_VERSION ?? "latest";
+  private docByBackend(): string {
+    switch (this.BACKEND_TYPE) {
+      case 'node':
+        return "Node express: [Link alla documentazione](https://nodejs.org/docs/latest/api/)"
+      case 'springboot':
+        return "Springboot: [Link alla documentazione](https://docs.spring.io/spring-boot/index.html)"
+      default:
+        return ""
+    }
+  }
+
+  private docByDB(): string {
+    switch (this.DATABASE_TYPE) {
+      case 'postgress':
+        return "Postgres: [Link alla documentazione](https://node-postgres.com/)"
+      case 'mongo':
+        return "MongoDB: [Link alla documentazione](https://www.mongodb.com/docs/)"
+      default:
+        return ""
+    }
   }
 
   public generate(): void {
-    const readmeContent = `# ${this.projectName}
-${this.projectDescription}
+    const readmeContent =
+      `# ${this.PROJECT_NAME}
+${this.PROJECT_DESCRIPTION}
 
-## Documentazioni utili
+## Useful documentation
 
-Angular: [Link alla documentazione](https://v${this.angularVersion}.angular.io/docs)
+Angular: [Link alla documentazione](https://v${this.ANGULAR_VERSION}.angular.io/docs)
 
-Node express: [Link alla documentazione](https://nodejs.org/docs/latest/api/)
+${this.docByBackend()}
 
-Postgres: [Link alla documentazione](https://node-postgres.com/)
+${this.docByDB()}
 
 ---
 
-Questa repository è frutto della BacaroTech CLI
+This repository is a result of the BacaroTech CLI
 
-Scopri di più su questa repo: [Link alla repo](https://github.com/BacaroTech/blueprint-bacaro-architecture)
-`;
-
+Learn more about this repo: [Link to the repo](https://github.com/BacaroTech/blueprint-bacaro-architecture)`.trim();
     try {
       fs.writeFileSync(path.join(this.projectRoot, "README.md"), readmeContent, "utf-8");
       logger.info("README generated successfully");
     } catch (error) {
       logger.error("Error generating README:", error);
+      throw new Error();
     }
   }
 }
+
+

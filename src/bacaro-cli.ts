@@ -1,60 +1,64 @@
-import { BackendCLI } from "./backend-cli";
-import { DatabaseCLI } from "./database-cli";
 import { DockerCLI } from "./docker-cli";
 import { FrontendCLI } from "./frontend-cli";
 import { ReadMeCLI } from "./readme-cli";
-
 import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
 import { program } from 'commander';
 import logger from 'winston';
+import { BackendCLI } from "./backend-cli";
+import { DictionaryCLI } from "./dictionary-cli" 
 
 dotenv.config();
 
-class BacaroCLI {
-  private PROJECT_NAME: string;
+class BacaroCLI extends DictionaryCLI {
+  private readonly messagePhaseSkip: string = 'Phase skipped by configuration';
 
   constructor(){
-    // load values from .env file
-    this.PROJECT_NAME = process.env.PROJECT_NAME ?? "";
+    super();
   }
 
-  // Ottieni il path Desktop in base al sistema operativo
+  /**
+  * Get the Desktop path based on your operating system
+  * @returns Join all arguments together and normalize the resulting pat
+  */
   private getDesktopPath(): string {
     if (process.platform === 'win32') {
-      return path.join(process.env.USERPROFILE || '', 'Desktop');
+      return path.join(this.USER_PROFILE || '', 'Desktop');
     } else {
-      return path.join(process.env.HOME || '', 'Desktop');
+      return path.join(this.HOME || '', 'Desktop');
     }
   }
 
-  public main() {
+  /**
+   * Orchestrator of the cli
+   */
+  public main(): void {
     program
       .version('1.0.0')
       .option('-n, --name <projectName>', 'Project name (overrides .env)')
       .action((opts) => {
-        // Usa il nome progetto passato da CLI oppure da .env
+        // Use the project name passed from CLI or .env file
         const projectName = opts.name || this.PROJECT_NAME;
         if (!projectName) {
           logger.error('Project name is required! Set it in the .env file or pass it via CLI with -n.');
-          process.exit(1);
+          throw new Error();
         }
 
-        const projectNameFE = `${projectName}FE`;
-        const projectNameBE = `${projectName}BE`;
+        const projectNameFE: string = `${projectName}FE`;
+        const projectNameBE: string = `${projectName}BE`;
 
         const projectRoot = path.join(this.getDesktopPath(), projectName);
 
         try {
-          // Se la cartella esiste, cancellala
+          // If the folder exists, delete it
           if (fs.existsSync(projectRoot)) {
             logger.info(`Found existing project folder at ${projectRoot}. Deleting it...`);
             fs.rmSync(projectRoot, { recursive: true, force: true });
             logger.info('Existing project folder deleted.');
           }
 
-          // Creazione cartelle progetto
+          // Creating project folders
           fs.mkdirSync(projectRoot, { recursive: true });
           const frontendPath = path.join(projectRoot, projectNameFE);
           const backendPath = path.join(projectRoot, projectNameBE);
@@ -67,26 +71,43 @@ class BacaroCLI {
           logger.info(`Frontend Path: ${frontendPath}`);
           logger.info(`Backend Path: ${backendPath}`);
 
-          // Generazione frontend
+          // Frontend generation
+          logger.info("*********** Frontend generation *************");
           const frontendCLI = new FrontendCLI(projectNameFE, projectRoot, frontendPath);
-          frontendCLI.generate();
+          if(this.ENABLE_GENERATE_FRONTEND === 'true')
+            frontendCLI.generate();
+          else  
+            logger.info(this.messagePhaseSkip)
 
-          // Generazione backend
+          // Backend generation
+          logger.info("*********** Backend generation *************");
           const backendCLI = new BackendCLI(projectNameBE, projectRoot, backendPath);
-          backendCLI.generate();
+          if(this.ENABLE_GENERATE_BACKEND === 'true')
+            backendCLI.generate();
+          else  
+            logger.info(this.messagePhaseSkip)
 
-          // Generazione docker-compose.yml + database
+          // Generate Docker-compose.yml + Database
+          logger.info("*********** Generate Docker-compose.yml + Database *************");
           const dockerCLI = new DockerCLI(projectRoot);
-          dockerCLI.generate();
+          if(this.ENABLE_GENERATE_DOCKER === 'true')
+            dockerCLI.generate();
+          else  
+            logger.info(this.messagePhaseSkip)
 
-          // Generazione README.md
+          // Generating README.md
+          logger.info("*********** Generating README.md *************");
           const readMeCLI = new ReadMeCLI(projectRoot);
-          readMeCLI.generate();
+          if(this.ENABLE_GENERATE_README === 'true')
+            readMeCLI.generate();
+          else  
+            logger.info(this.messagePhaseSkip)
 
-          logger.info(`${projectName} setup complete!`);
+          logger.info("*********** Setup completed *************");
+          logger.info(`${projectName} setup completed!`);
         } catch (error: any) {
           logger.error('Error during project setup:', error.message || error);
-          process.exit(1);
+          throw new Error();
         }
       });
 
@@ -94,5 +115,6 @@ class BacaroCLI {
   }
 }
 
+// Execute CLI and enjoy :)
 const bacaroCli = new BacaroCLI();
 bacaroCli.main();

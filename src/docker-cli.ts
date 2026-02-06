@@ -9,20 +9,14 @@ dotenv.config();
 
 export class DockerCLI extends BaseCLI {
   private readonly projectRoot: string;
-  private readonly projectName: string;
-  private readonly projectNameBase: string;
-  private readonly backendPort: string;
-  private databaseCLI: DatabaseCLI; 
+  private readonly PROJECT_NAME_TOLOWER: string = this.PROJECT_NAME.toLocaleLowerCase() ?? '';
+  private databaseCLI: DatabaseCLI;
 
   constructor(projectRoot: string) {
     super();
     this.projectRoot = projectRoot;
 
-    // load values from .env file
-    this.projectName = process.env.PROJECT_NAME?.toLocaleLowerCase() ?? '';
-    this.projectNameBase = process.env.PROJECT_NAME ?? '';
-    this.backendPort = process.env.BACKEND_PORT ?? '';
-    this.databaseCLI = new DatabaseCLI(this.projectRoot); 
+    this.databaseCLI = new DatabaseCLI(this.projectRoot);
   }
 
   private generateHead(): string {
@@ -30,85 +24,140 @@ export class DockerCLI extends BaseCLI {
   }
 
   private generateBackendService(): string {
+    const isNode = process.env.BACKEND_TYPE === 'node';
+    return isNode ? this.generateNodeBackendService() : this.generateSpringBootBackendService();
+  }
+
+  private generateNodeBackendService(): string {
     return `
-  ${this.projectName}-be:
+  ${this.PROJECT_NAME_TOLOWER}-be:
     build:
-      context: ./${this.projectNameBase}BE
+      context: ./${this.PROJECT_NAME}BE
     ports:
-      - "${this.backendPort}:${this.backendPort}"
+      - "${this.BACKEND_PORT}:${this.BACKEND_PORT}"
     volumes:
-      - "./${this.projectNameBase}BE/node_modules:/app/node_modules"
-      - "./${this.projectNameBase}BE:/app"
+      - "./${this.PROJECT_NAME}BE/node_modules:/app/node_modules"
+      - "./${this.PROJECT_NAME}BE:/app"
     networks:
-      - ${this.projectName}-network
+      - ${this.PROJECT_NAME_TOLOWER}-network
     restart: unless-stopped`;
+  }
+
+  private generateSpringBootBackendService(): string {
+    return `
+  ${this.PROJECT_NAME_TOLOWER}-be:
+    build:
+      context: ./${this.PROJECT_NAME}BE
+      dockerfile: Dockerfile
+    ports:
+      - "${this.BACKEND_PORT}:${this.BACKEND_PORT}"
+    volumes:
+      - "./${this.PROJECT_NAME}BE/target:/app/target"
+      - "./${this.PROJECT_NAME}BE/src:/app/src"
+      - maven-cache:/root/.m2
+    networks:
+      - ${this.PROJECT_NAME_TOLOWER}-network
+    restart: unless-stopped
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev`;
   }
 
   private generateVolumes(): string {
     return `
 volumes:
-  ${this.projectName}-db-data:`;
+  ${this.PROJECT_NAME_TOLOWER}-db-data:`;
   }
 
   private generateNetwork(): string {
     return `
 networks:
-  ${this.projectName}-network:
+  ${this.PROJECT_NAME_TOLOWER}-network:
     driver: bridge`;
   }
 
-  private generateDockerFileBE(){
+  private generateDockerFileNodeBE() {
     return `
-# Fase di build (TypeScript -> JavaScript)
+# Build Phase (TypeScript -> JavaScript)
 FROM node:18 AS builder
 
 WORKDIR /app
 
-# Copia package.json prima per sfruttare cache Docker
+# Copy package.json first to take advantage of Docker cache
 COPY package*.json ./
 
-# Installa tutte le dipendenze (dev + prod)
+# Install all dependencies (dev + prod)
 RUN npm install
 
-# Copia il resto del codice
+# Copy the rest of the code
 COPY . .
 
-# Compila TypeScript
+# Compile TypeScript
 RUN npm run build
 
 
-# Fase per l'immagine finale (solo codice JS)
+# Final image step (JS code only)
 FROM node:18 AS runner
 
 WORKDIR /app
 
-# Copia solo ciò che serve a runtime
+# Copy only what is needed at runtime
 COPY package*.json ./
 
-# Installa solo dipendenze *di produzione*
+# Install only *production* dependencies
 RUN npm install --omit=dev
 
-# Copia i file compilati
+# Copy the compiled files
 COPY --from=builder /app/dist ./dist
 
-# Copia file ambiente se ti serve
+# Copy environment file
 COPY .env .env
 
-# Espone la porta del backend
+# Exposes the backend port
 EXPOSE 4000
 
-# Comando finale
-CMD ["node", "dist/index.js"]
-`
+# Final command
+CMD ["node", "dist/index.js"]`;
   }
 
-  private writeDockerCompose(){
+  private generateDockerFileSpringBE(): string {
+    return `# Stage 1: Build
+FROM maven:3.9-eclipse-temurin-17 AS build
+WORKDIR /app
+
+# Copy pom.xml and download dependencies
+COPY pom.xml .
+RUN mvn dependency:go-offline -B
+
+# Copy source code and build
+COPY src ./src
+RUN mvn clean package -DskipTests
+
+# Verify the JAR was created
+RUN ls -la /app/target/
+
+# Stage 2: Runtime
+FROM eclipse-temurin:17-jre-alpine
+WORKDIR /app
+
+# Copy the JAR from build stage (explicitly use app.jar since finalName=app)
+COPY --from=build /app/target/app.jar app.jar
+
+# Verify the JAR was copied
+RUN ls -la /app/
+
+# Expose port
+EXPOSE ${this.BACKEND_PORT}
+
+# Run the application
+ENTRYPOINT ["java", "-jar", "app.jar"]`;
+  }
+
+  private writeDockerCompose() {
     try {
       const dockerComposePath = path.join(this.projectRoot, 'docker-compose.yml');
 
       const content = [
         this.generateHead(),
-        //this.generateAngularService(),
         this.databaseCLI.auxGenerate(),
         this.generateBackendService(),
         this.generateVolumes(),
@@ -119,16 +168,24 @@ CMD ["node", "dist/index.js"]
       logger.info(`Dockerfile generated at ${dockerComposePath}`);
     } catch (error: any) {
       logger.error(`Failed to generate docker-compose.yml: ${error.message || error}`);
+      throw new Error();
     }
   }
 
-  private writeDockerFile(){
+  private writeDockerFile(): void {
     try {
-      const dockerFilePath = path.join(this.projectRoot + '/' + this.projectNameBase + 'BE', 'Dockerfile');
-      fs.writeFileSync(dockerFilePath, this.generateDockerFileBE());
-      logger.info(`docker-compose.yml generated at ${dockerFilePath}`);
+      const isNode = process.env.BACKEND_TYPE === 'node'; // oppure usa una tua variabile di classe
+      const dockerFilePath = path.join(this.projectRoot + '/' + this.PROJECT_NAME + 'BE', 'Dockerfile');
+
+      const dockerContent = isNode
+        ? this.generateDockerFileNodeBE()
+        : this.generateDockerFileSpringBE();
+
+      fs.writeFileSync(dockerFilePath, dockerContent);
+      logger.info(`Dockerfile generated at ${dockerFilePath}`);
     } catch (error: any) {
-      logger.error(`Failed to generate docker-compose.yml: ${error.message || error}`);
+      logger.error(`Failed to generate Dockerfile: ${error.message || error}`);
+      throw new Error();
     }
   }
 

@@ -8,30 +8,16 @@ import * as logger from 'winston';
 dotenv.config();
 
 export class FrontendCLI extends BaseCLI {
-  private projectName: string;
-  private projectRoot: string;
-  private frontendPath: string;
+  private readonly projectName: string;
+  private readonly projectRoot: string;
+  private readonly frontendPath: string;
   private angularCommand: string = "";
-
-  // Load environment variables
-  private PROJECT_NAME: string;
-  private UI_LIBRARY: string;
-  private FRONTEND_PORT: string;
-  private ANGULAR_VERSION: string;
-  private BACKEND_PORT: string;
 
   public constructor(projectName: string, projectRoot: string, frontendPath: string) {
     super();
     this.projectName = projectName;
     this.projectRoot = projectRoot;
     this.frontendPath = frontendPath;
-
-    // load values from .env file
-    this.PROJECT_NAME = process.env.PROJECT_NAME ?? "";
-    this.UI_LIBRARY = process.env.UI_LIBRARY ?? "";
-    this.FRONTEND_PORT = process.env.UI_LIBRARY ?? "";
-    this.ANGULAR_VERSION = process.env.ANGULAR_VERSION ?? "";
-    this.BACKEND_PORT = process.env.BACKEND_PORT ?? "";
   }
 
   // Generate the entire frontend application
@@ -46,7 +32,6 @@ export class FrontendCLI extends BaseCLI {
     this.setupErrorHandling();
     this.setupHttpInterceptor();
     this.setupUiLibrary();
-    this.createDockerfile();
     this.updateAngularJson();
 
     logger.info(`Angular project "${this.projectName}" is configured and running on port ${this.FRONTEND_PORT}.`);
@@ -126,7 +111,7 @@ export const environment = {
     const filePath = path.join(this.frontendPath, 'src', 'app', 'app.component.ts');
     const content = `
 import { Component, OnInit } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 
 @Component({
   selector: 'app-root',
@@ -147,13 +132,13 @@ export class AppComponent implements OnInit {
 
   fetchData(): void {
     this.loading = true;
-    this.http.get('http://localhost:${this.BACKEND_PORT}').subscribe({
-      next: (response) => {
+    this.http.get('http://localhost:${this.BACKEND_PORT}/api/users').subscribe({
+      next: (response: any) => {
         this.data = response;
         this.loading = false;
         console.log('Fetched data from backend:', response);
       },
-      error: (err) => {
+      error: (err: HttpErrorResponse) => {
         this.error = 'API Error';
         this.loading = false;
         console.error('Error fetching data:', err);
@@ -293,7 +278,7 @@ export class HttpInterceptorService implements HttpInterceptor {
 
     if (!angularJson.projects[`${this.PROJECT_NAME}FE`]) {
       logger.error('Project name mismatch in angular.json');
-      process.exit(1);
+      throw new Error();
     }
 
     angularJson.projects[`${this.PROJECT_NAME}FE`].architect.build.options.styles.push('node_modules/bootstrap/dist/css/bootstrap.min.css');
@@ -323,23 +308,6 @@ export class HttpInterceptorService implements HttpInterceptor {
     logger.info('Bootstrap UI setup complete.');
   }
 
-  // Create Dockerfile
-  private createDockerfile(): void {
-    const dockerfilePath = path.join(this.projectRoot, this.projectName, 'Dockerfile');
-    const content = `
-FROM node:12.2.0
-
-WORKDIR /app
-COPY package.json ./
-RUN npm install
-
-COPY . .
-EXPOSE ${this.FRONTEND_PORT}
-
-CMD ["npm", "start"]
-`.trim();
-    fs.writeFileSync(dockerfilePath, content);
-  }
 
   // Update angular.json to set custom port
   private updateAngularJson(): void {
