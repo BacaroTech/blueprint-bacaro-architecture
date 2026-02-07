@@ -5,33 +5,28 @@ import * as path from 'path';
 import * as logger from 'winston';
 import { DictionaryCLI } from "../utils/dictionary-cli";
 import { MessageCLI } from "../utils/message-cli";
+import { GenerateAngular } from "./generate-angular";
+import { InstallDependencies } from "./install-dependencies";
 
 export class FrontendCLI extends BaseCLI {
   private readonly projectName: string;
   private readonly projectRoot: string;
   private readonly frontendPath: string;
-  private readonly angularCommand: string;
 
   public constructor(projectName: string, projectRoot: string, frontendPath: string) {
     super();
     this.projectName = projectName;
     this.projectRoot = projectRoot;
     this.frontendPath = frontendPath;
-
-    this.angularCommand = `npx -y @angular/cli@${DictionaryCLI.get("ANGULAR_VERSION")} new "${this.projectName}" \
-      --directory "${this.projectName}" \
-      --style=scss \
-      --routing \
-      --skip-git \
-      --standalone`;
   }
+    
 
   // Generate the entire frontend application
   public generate(): void {
     logger.info(`Generating Angular project "${this.projectName}" with version ${DictionaryCLI.get("ANGULAR_VERSION")}...`);
 
-    this.generateAngularProject();
-    this.installDependencies();
+    GenerateAngular.generateAngularProject(this.projectRoot, this.projectName);
+    InstallDependencies.installDependencies(this.projectRoot, this.frontendPath);
     this.createFolderStructure();
     this.updateEnvironmentFiles();
     this.updateAppFiles();
@@ -43,18 +38,9 @@ export class FrontendCLI extends BaseCLI {
     logger.info(`Angular project "${this.projectName}" is configured and running on port ${DictionaryCLI.get("FRONTEND_PORT")}.`);
   }
 
-  // Create Angular project (standalone by default in Angular 19)
-  private generateAngularProject(): void {
-    execSync(this.angularCommand, { cwd: this.projectRoot, stdio: 'inherit' });
-  }
+  
 
-  // Install additional dependencies
-  private installDependencies(): void {
-    const projectDir = path.join(this.projectRoot, this.projectName);
-    execSync(`npm install @angular/core@${DictionaryCLI.get("ANGULAR_VERSION")} @angular/cli@${DictionaryCLI.get("ANGULAR_VERSION")}`, { cwd: projectDir, stdio: 'inherit' });
-    execSync(`npm install winston @types/winston`, { cwd: this.frontendPath, stdio: 'inherit' });
-  }
-
+  
   // Create default folder structure
   private createFolderStructure(): void {
     const appRoot = path.join(this.frontendPath, 'src', 'app');
