@@ -2,7 +2,7 @@ import path from 'path';
 import fs from 'fs';
 import logger from 'winston';
 import dotenv from "dotenv";
-import { DictionaryCLI } from '../dictionary-cli';
+import { DictionaryCLI } from '../utils/dictionary-cli';
 
 dotenv.config();
 

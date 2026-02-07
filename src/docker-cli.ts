@@ -1,10 +1,10 @@
-import { BaseCLI } from "./base-cli";
+import { BaseCLI } from "./utils/base-cli";
 import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
 import logger from 'winston';
 import { DatabaseCLI } from "./database-cli";
-import { DictionaryCLI } from "./dictionary-cli";
+import { DictionaryCLI } from "./utils/dictionary-cli";
 
 dotenv.config();
 

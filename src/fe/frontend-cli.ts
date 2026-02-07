@@ -1,9 +1,10 @@
-import { BaseCLI } from "../base-cli";
+import { BaseCLI } from "../utils/base-cli";
 import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as logger from 'winston';
-import { DictionaryCLI } from "../dictionary-cli";
+import { DictionaryCLI } from "../utils/dictionary-cli";
+import { MessageCLI } from "../utils/message-cli";
 
 export class FrontendCLI extends BaseCLI {
   private readonly projectName: string;
@@ -222,11 +223,17 @@ export const httpInterceptor: HttpInterceptorFn = (req, next) => {
 
   // Setup UI library (only Bootstrap for now)
   private setupUiLibrary(): void {
-    if (DictionaryCLI.get("UI_LIBRARY") === 'bootstrap') {
-      this.setupBootstrap();
+    logger.info('*********** FE ui library generation *************')
+    if (DictionaryCLI.get('ENABLE_UI_LIBRARY') === 'false') {
+      logger.info(MessageCLI.messagePhaseSkip)
     } else {
-      logger.warn(`Unsupported UI library: ${DictionaryCLI.get("UI_LIBRARY")}`);
+      if (DictionaryCLI.get("UI_LIBRARY") === 'bootstrap') {
+        this.setupBootstrap();
+      } else {
+        logger.warn(`Unsupported UI library: ${DictionaryCLI.get("UI_LIBRARY")}`);
+      }
     }
+
   }
 
   private setupBootstrap(): void {

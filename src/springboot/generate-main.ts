@@ -1,7 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 import logger from 'winston';
-import { Utils } from '../utils';
+import { Utils } from '../utils/utils';
 
 export class MainGenerator {
     static generateMainApplication(backendPath: string, projectNameBE: string): void {

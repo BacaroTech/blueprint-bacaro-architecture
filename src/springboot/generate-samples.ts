@@ -1,7 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 import logger from 'winston';
-import { DictionaryCLI } from '../dictionary-cli';
+import { DictionaryCLI } from '../utils/dictionary-cli';
 
 export class SamplesGenerator {
     static generateSampleFiles(backendPath: string, projectNameBE: string): void {

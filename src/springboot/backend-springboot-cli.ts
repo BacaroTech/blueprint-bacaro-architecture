@@ -1,14 +1,12 @@
-import fs from 'fs';
-import path from 'path';
 import dotenv from "dotenv";
 import logger from 'winston';
-import { BaseCLI } from '../base-cli';
+import { BaseCLI } from '../utils/base-cli';
 import { FolderGenerator } from './generate-folder';
 import { MainGenerator } from './generate-main';
 import { GitIgnoreGenerator } from './generate-git-ignore';
 import { SwaggerGenerator } from './generate-swagger';
 import { BannerGenerator } from './generate-banner';
-import { DictionaryCLI } from '../dictionary-cli';
+import { DictionaryCLI } from '../utils/dictionary-cli';
 import { PomGenerator } from './generate-pom';
 import { PropertiesGenerator } from './generate-properties';
 import { SamplesGenerator } from './generate-samples';
