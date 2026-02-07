@@ -10,6 +10,7 @@ import { DictionaryCLI } from '../utils/dictionary-cli';
 import { PomGenerator } from './generate-pom';
 import { PropertiesGenerator } from './generate-properties';
 import { SamplesGenerator } from './generate-samples';
+import { execSync } from "child_process";
 
 dotenv.config();
 
@@ -17,12 +18,16 @@ export class BackendSpringbootCLI extends BaseCLI {
     private readonly projectRoot: string;
     private readonly backendPath: string;
     private readonly projectNameBE: string;
+    private readonly wrapperCommand: string;
+    private readonly mvnCleanInstall: string;
 
     public constructor(projectNameBE: string, projectRoot: string, backendPath: string) {
         super();
         this.projectNameBE = projectNameBE;
         this.projectRoot = projectRoot;
         this.backendPath = backendPath;
+        this.wrapperCommand = `mvn -N wrapper:wrapper`;
+        this.mvnCleanInstall = `./mvnw clean install`;
     }
         
     public generate(): void {
@@ -40,6 +45,8 @@ export class BackendSpringbootCLI extends BaseCLI {
             SamplesGenerator.generateSampleFiles(this.backendPath, this.projectNameBE);
             GitIgnoreGenerator.generateGitignore(this.backendPath);
             BannerGenerator.generateBanner(this.backendPath, this.projectNameBE);
+            this.generateWrapper();
+            this.execWrapper();
 
             const isPostgres = DictionaryCLI.get('DATABASE_TYPE') === 'postgres';
             const isMongo = DictionaryCLI.get('DATABASE_TYPE') === 'mongo';
@@ -67,5 +74,13 @@ export class BackendSpringbootCLI extends BaseCLI {
             logger.error('Error generating Spring Boot backend:', error);
             throw new Error();
         }
+    }
+
+    private generateWrapper(): void {
+        execSync(this.wrapperCommand, { cwd: this.backendPath, stdio: 'inherit' });
+    }
+
+    private execWrapper(): void {
+        execSync(this.mvnCleanInstall, { cwd: this.backendPath, stdio: 'inherit' });
     }
 }
