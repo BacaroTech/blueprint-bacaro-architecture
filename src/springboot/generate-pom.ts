@@ -7,11 +7,11 @@ import { DictionaryCLI } from '../dictionary-cli';
 dotenv.config();
 
 
-export class PomGenerator extends DictionaryCLI{
+export class PomGenerator {
     
-        generatePomXml(backendPath: string, projectNameBE: string): void {
-            const isPostgres = this.DATABASE_TYPE === 'postgres';
-            const isMongo = this.DATABASE_TYPE === 'mongo';
+        static generatePomXml(backendPath: string, projectNameBE: string): void {
+            const isPostgres = DictionaryCLI.get('DATABASE_TYPE') === 'postgres';
+            const isMongo = DictionaryCLI.get('DATABASE_TYPE') === 'mongo';
     
             const databaseDependencies = isPostgres ? `
             <dependency>

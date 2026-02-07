@@ -1,14 +1,14 @@
 import path from 'path';
 import fs from 'fs';
 import logger from 'winston';
-import { BaseCLI } from '../base-cli';
+import { DictionaryCLI } from '../dictionary-cli';
 
-export class SamplesGenerator extends BaseCLI {
-    generateSampleFiles(backendPath: string, projectNameBE: string): void {
+export class SamplesGenerator {
+    static generateSampleFiles(backendPath: string, projectNameBE: string): void {
         const packageName = `com.example.${projectNameBE.toLowerCase()}`;
         const javaPath = path.join(backendPath, 'src', 'main', 'java', 'com', 'example', projectNameBE.toLowerCase());
-        const isPostgres = this.DATABASE_TYPE === 'postgres';
-        const isMongo = this.DATABASE_TYPE === 'mongo';
+        const isPostgres = DictionaryCLI.get('DATABASE_TYPE') === 'postgres';
+        const isMongo = DictionaryCLI.get('DATABASE_TYPE') === 'mongo';
 
         if (isPostgres) {
             // Model per PostgreSQL (JPA)

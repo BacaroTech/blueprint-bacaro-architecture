@@ -8,6 +8,10 @@ import { MainGenerator } from './generate-main';
 import { GitIgnoreGenerator } from './generate-git-ignore';
 import { SwaggerGenerator } from './generate-swagger';
 import { BannerGenerator } from './generate-banner';
+import { DictionaryCLI } from '../dictionary-cli';
+import { PomGenerator } from './generate-pom';
+import { PropertiesGenerator } from './generate-properties';
+import { SamplesGenerator } from './generate-samples';
 
 dotenv.config();
 
@@ -31,33 +35,33 @@ export class BackendSpringbootCLI extends BaseCLI {
             FolderGenerator.FolderGenerator(this.backendPath, this.projectNameBE);
 
             // Generate configuration files
-            //todo implement static pom generator
-            //todo implement static properties generator
+            PomGenerator.generatePomXml(this.backendPath, this.projectNameBE);
+            PropertiesGenerator.generateApplicationProperties(this.backendPath, this.projectNameBE);
             SwaggerGenerator.generateSwaggerConfig(this.backendPath, this.projectNameBE);
             MainGenerator.generateMainApplication(this.backendPath, this.projectNameBE);
-            //todo implement samples generator
+            SamplesGenerator.generateSampleFiles(this.backendPath, this.projectNameBE);
             GitIgnoreGenerator.generateGitignore(this.backendPath);
             BannerGenerator.generateBanner(this.backendPath, this.projectNameBE);
 
-            const isPostgres = this.DATABASE_TYPE === 'postgres';
-            const isMongo = this.DATABASE_TYPE === 'mongo';
+            const isPostgres = DictionaryCLI.get('DATABASE_TYPE') === 'postgres';
+            const isMongo = DictionaryCLI.get('DATABASE_TYPE') === 'mongo';
 
             logger.info('Spring Boot backend generated successfully!');
             logger.info(`To run the project:`);
             logger.info(`  cd ${this.backendPath}`);
             logger.info(`  mvn spring-boot:run`);
-            logger.info(`The API will be available at http://localhost:${this.BACKEND_PORT}`);
-            logger.info(`Swagger UI: http://localhost:${this.BACKEND_PORT}/swagger-ui.html`);
-            logger.info(`API Docs: http://localhost:${this.BACKEND_PORT}/api-docs`);
-            logger.info(`Health Check: http://localhost:${this.BACKEND_PORT}/actuator/health`);
+            logger.info(`The API will be available at http://localhost:${DictionaryCLI.get('BACKEND_PORT')}`);
+            logger.info(`Swagger UI: http://localhost:${DictionaryCLI.get('BACKEND_PORT')}/swagger-ui.html`);
+            logger.info(`API Docs: http://localhost:${DictionaryCLI.get('BACKEND_PORT')}/api-docs`);
+            logger.info(`Health Check: http://localhost:${DictionaryCLI.get('BACKEND_PORT')}/actuator/health`);
 
             if (isPostgres) {
-                const dbHost = this.DATABASE_HOST;
-                const dbPort = this.DATABASE_PORT;
-                const dbName = this.DATABASE_NAME;
+                const dbHost = DictionaryCLI.get('DATABASE_HOST');
+                const dbPort = DictionaryCLI.get('DATABASE_PORT');
+                const dbName = DictionaryCLI.get('DATABASE_NAME');
                 logger.info(`PostgreSQL Database: ${dbHost}:${dbPort}/${dbName}`);
             } else if (isMongo) {
-                const dbName = this.DATABASE_NAME || 'database';
+                const dbName = DictionaryCLI.get('DATABASE_NAME') || 'database';
                 logger.info(`MongoDB Database: ${dbName}`);
             }
 
