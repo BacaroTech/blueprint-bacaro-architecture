@@ -1,7 +1,7 @@
 import { BaseCLI } from "./base-cli";
 import dotenv from "dotenv";
 import logger from 'winston';
-import { BackendSpringbootCLI } from "./backend-springboot-cli";
+import { BackendSpringbootCLI } from "./springboot/backend-springboot-cli";
 import { BackendNodeCLI } from "./backend-node-cli";
 
 dotenv.config();

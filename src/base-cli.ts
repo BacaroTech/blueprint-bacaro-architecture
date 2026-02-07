@@ -21,7 +21,7 @@ export class BaseCLI extends DictionaryCLI {
     /**
      * Generate folder structure
      */
-    protected generateFolder(): void{
+    protected FolderGenerator(): void{
         throw new Error
     }
 }
