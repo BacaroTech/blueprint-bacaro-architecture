@@ -5,6 +5,7 @@ import path from 'path';
 import dotenv from "dotenv";
 import logger from 'winston';
 import { error } from "console";
+import { DictionaryCLI } from "./dictionary-cli";
 
 dotenv.config();
 
@@ -110,7 +111,7 @@ import { logger, morganStream } from './config/logger';
 dotenv.config();
 
 const app = express();
-const port = process.env.PORT || ${this.BACKEND_PORT};
+const port = process.env.PORT || ${DictionaryCLI.get("BACKEND_PORT")};
 
 // Validate required environment variables
 const requiredEnvVars = ['DATABASE_PORT', 'DATABASE_USR', 'DATABASE_PASSWORD', 'DATABASE_NAME', 'DATABASE_HOST'];
@@ -503,7 +504,7 @@ import { logger, morganStream } from './config/logger';
 dotenv.config();
 
 const app = express();
-const port = process.env.PORT || ${this.BACKEND_PORT};
+const port = process.env.PORT || ${DictionaryCLI.get("BACKEND_PORT")};
 
 // Validate required environment variables
 const requiredEnvVars = ['DATABASE_URI'];
@@ -905,20 +906,20 @@ process.on('uncaughtException', (err: Error) => {
   }
 
   private getServerCode(): string {
-    return this.DATABASE_TYPE === 'mongo' ? this.getMongoServer() : this.getPostgresServer();
+    return DictionaryCLI.get("DATABASE_TYPE") === 'mongo' ? this.getMongoServer() : this.getPostgresServer();
   }
 
   private writeEnvFile() {
     //load configuration for database
     let envFileContent: string = 
-`DATABASE_PORT=${this.DATABASE_PORT}
-DATABASE_USR=${this.DATABASE_USR}
-DATABASE_PASSWORD=${this.DATABASE_PASSWORD}
-DATABASE_NAME=${this.DATABASE_NAME}
-DATABASE_URI=${this.DATABASE_URI}
-DATABASE_HOST=${this.DATABASE_HOST}
-BACKEND_PORT=${this.BACKEND_PORT}
-LOG_LEVEL=${this.LOG_LEVEL}`.trim();
+`DATABASE_PORT=${DictionaryCLI.get("DATABASE_PORT")}
+DATABASE_USR=${DictionaryCLI.get("DATABASE_USR")}
+DATABASE_PASSWORD=${DictionaryCLI.get("DATABASE_PASSWORD")}
+DATABASE_NAME=${DictionaryCLI.get("DATABASE_NAME")}
+DATABASE_URI=${DictionaryCLI.get("DATABASE_URI")}
+DATABASE_HOST=${DictionaryCLI.get("DATABASE_HOST")}
+BACKEND_PORT=${DictionaryCLI.get("BACKEND_PORT")}
+LOG_LEVEL=${DictionaryCLI.get("LOG_LEVEL")}`.trim();
 
     fs.writeFileSync(path.join(this.backendPath, '.env'), envFileContent);
   }
@@ -984,9 +985,9 @@ logs`.trim();
     });
 
     // Install DB driver
-    if (this.DATABASE_TYPE === 'postgres') {
+    if (DictionaryCLI.get("DATABASE_TYPE") === 'postgres') {
       execSync(`npm install pg @types/pg`, { cwd: backendCWD, stdio: 'inherit' });
-    } else if (this.DATABASE_TYPE === 'mongo') {
+    } else if (DictionaryCLI.get("DATABASE_TYPE") === 'mongo') {
       execSync(`npm install mongoose`, { cwd: backendCWD, stdio: 'inherit' });
     }
 

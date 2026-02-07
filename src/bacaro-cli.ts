@@ -1,13 +1,13 @@
-import { DockerCLI } from "./docker-cli";
-import { FrontendCLI } from "./frontend-cli";
-import { ReadMeCLI } from "./readme-cli";
+import { program } from 'commander';
+import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
-import dotenv from 'dotenv';
-import { program } from 'commander';
 import logger from 'winston';
 import { BackendCLI } from "./backend-cli";
-import { DictionaryCLI } from "./dictionary-cli" 
+import { DictionaryCLI } from "./dictionary-cli";
+import { DockerCLI } from "./docker-cli";
+import { FrontendCLI } from "./fe/frontend-cli";
+import { ReadMeCLI } from "./readme-cli";
 
 dotenv.config();
 
@@ -24,9 +24,9 @@ class BacaroCLI extends DictionaryCLI {
   */
   private getDesktopPath(): string {
     if (process.platform === 'win32') {
-      return path.join(this.USER_PROFILE || '', 'Desktop');
+      return path.join(DictionaryCLI.get("USER_PROFILE") || '', 'Desktop');
     } else {
-      return path.join(this.HOME || '', 'Desktop');
+      return path.join(DictionaryCLI.get("HOME") || '', 'Desktop');
     }
   }
 
@@ -34,12 +34,13 @@ class BacaroCLI extends DictionaryCLI {
    * Orchestrator of the cli
    */
   public main(): void {
+    
     program
       .version('1.0.0')
       .option('-n, --name <projectName>', 'Project name (overrides .env)')
       .action((opts) => {
         // Use the project name passed from CLI or .env file
-        const projectName = opts.name || this.PROJECT_NAME;
+        const projectName = opts.name || DictionaryCLI.get("PROJECT_NAME");
         if (!projectName) {
           logger.error('Project name is required! Set it in the .env file or pass it via CLI with -n.');
           throw new Error();
@@ -74,7 +75,7 @@ class BacaroCLI extends DictionaryCLI {
           // Frontend generation
           logger.info("*********** Frontend generation *************");
           const frontendCLI = new FrontendCLI(projectNameFE, projectRoot, frontendPath);
-          if(this.ENABLE_GENERATE_FRONTEND === 'true')
+          if(DictionaryCLI.get("ENABLE_GENERATE_FRONTEND") === 'true')
             frontendCLI.generate();
           else  
             logger.info(this.messagePhaseSkip)
@@ -82,7 +83,7 @@ class BacaroCLI extends DictionaryCLI {
           // Backend generation
           logger.info("*********** Backend generation *************");
           const backendCLI = new BackendCLI(projectNameBE, projectRoot, backendPath);
-          if(this.ENABLE_GENERATE_BACKEND === 'true')
+          if(DictionaryCLI.get("ENABLE_GENERATE_BACKEND") === 'true')
             backendCLI.generate();
           else  
             logger.info(this.messagePhaseSkip)
@@ -90,7 +91,7 @@ class BacaroCLI extends DictionaryCLI {
           // Generate Docker-compose.yml + Database
           logger.info("*********** Generate Docker-compose.yml + Database *************");
           const dockerCLI = new DockerCLI(projectRoot);
-          if(this.ENABLE_GENERATE_DOCKER === 'true')
+          if(DictionaryCLI.get("ENABLE_GENERATE_DOCKER") === 'true')
             dockerCLI.generate();
           else  
             logger.info(this.messagePhaseSkip)
@@ -98,7 +99,7 @@ class BacaroCLI extends DictionaryCLI {
           // Generating README.md
           logger.info("*********** Generating README.md *************");
           const readMeCLI = new ReadMeCLI(projectRoot);
-          if(this.ENABLE_GENERATE_README === 'true')
+          if(DictionaryCLI.get("ENABLE_GENERATE_README") === 'true')
             readMeCLI.generate();
           else  
             logger.info(this.messagePhaseSkip)

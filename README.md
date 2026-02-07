@@ -5,6 +5,7 @@ The "blueprint-bacaro-architecture" project was born as a CLI developed to gener
 1. Create a dist folder at the same level as the other folders
 2. Compile the .env file with your preferences
 3. Place a copy of the .env file in the dist folder
+4. Make a npm i
 
 ## How to use it
 
