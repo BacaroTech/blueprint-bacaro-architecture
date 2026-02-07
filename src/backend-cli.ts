@@ -25,7 +25,7 @@ export class BackendCLI extends BaseCLI {
 
     public generate(): void {
         // Backend generation
-        switch (DictionaryCLI.get("HOME")) {
+        switch (DictionaryCLI.get("BACKEND_TYPE")) {
             case 'springboot': {
                 logger.info('Backend generation: springboot')
                 const backendCLI = new BackendSpringbootCLI(this.projectNameBE, this.projectRoot, this.backendPath);
