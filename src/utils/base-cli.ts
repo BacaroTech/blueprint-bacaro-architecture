@@ -23,7 +23,7 @@ export class BaseCLI {
     /**
      * Generate folder structure
      */
-    protected generateFolder(): void{
+    protected FolderGenerator(): void{
         throw new Error
     }
 }

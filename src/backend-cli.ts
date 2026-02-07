@@ -1,7 +1,7 @@
 import { BaseCLI } from "./utils/base-cli";
 import dotenv from "dotenv";
 import logger from 'winston';
-import { BackendSpringbootCLI } from "./backend-springboot-cli";
+import { BackendSpringbootCLI } from "./springboot/backend-springboot-cli";
 import { BackendNodeCLI } from "./backend-node-cli";
 import { DictionaryCLI } from "./utils/dictionary-cli";
 
@@ -25,7 +25,7 @@ export class BackendCLI extends BaseCLI {
 
     public generate(): void {
         // Backend generation
-        switch (DictionaryCLI.get("HOME")) {
+        switch (DictionaryCLI.get("BACKEND_TYPE")) {
             case 'springboot': {
                 logger.info('Backend generation: springboot')
                 const backendCLI = new BackendSpringbootCLI(this.projectNameBE, this.projectRoot, this.backendPath);

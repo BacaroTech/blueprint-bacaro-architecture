@@ -27,7 +27,7 @@ export class BackendNodeCLI extends BaseCLI {
   /**
    * Generate the different folders with the correct tree structure
    */
-  protected generateFolder(): void {
+  protected FolderGenerator(): void {
     const root = path.join(this.backendPath, 'src');
     logger.info('Target root:', root);
 
@@ -1060,7 +1060,7 @@ logs`.trim();
     this.writeTSconfigJson();
 
     // Generate folders
-    this.generateFolder();
+    this.FolderGenerator();
 
     logger.info('Express backend with TypeScript and Winston logging setup complete!');
   }
