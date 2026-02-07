@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import dotenv from "dotenv";
 import logger from "winston";
+import { DictionaryCLI } from "./dictionary-cli";
 
 dotenv.config();
 
@@ -15,7 +16,7 @@ export class ReadMeCLI extends BaseCLI {
   }
 
   private docByBackend(): string {
-    switch (this.BACKEND_TYPE) {
+    switch (DictionaryCLI.get("HOME")) {
       case 'node':
         return "Node express: [Link alla documentazione](https://nodejs.org/docs/latest/api/)"
       case 'springboot':
@@ -26,7 +27,7 @@ export class ReadMeCLI extends BaseCLI {
   }
 
   private docByDB(): string {
-    switch (this.DATABASE_TYPE) {
+    switch (DictionaryCLI.get("DATABASE_TYPE")) {
       case 'postgress':
         return "Postgres: [Link alla documentazione](https://node-postgres.com/)"
       case 'mongo':
@@ -38,12 +39,12 @@ export class ReadMeCLI extends BaseCLI {
 
   public generate(): void {
     const readmeContent =
-      `# ${this.PROJECT_NAME}
-${this.PROJECT_DESCRIPTION}
+      `# ${DictionaryCLI.get("PROJECT_NAME")}
+${DictionaryCLI.get("PROJECT_DESCRIPTION")}
 
 ## Useful documentation
 
-Angular: [Link alla documentazione](https://v${this.ANGULAR_VERSION}.angular.io/docs)
+Angular: [Link alla documentazione](https://v${DictionaryCLI.get("ANGULAR_VERSION")}.angular.io/docs)
 
 ${this.docByBackend()}
 

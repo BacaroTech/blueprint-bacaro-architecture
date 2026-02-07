@@ -4,12 +4,13 @@ import path from 'path';
 import dotenv from 'dotenv';
 import logger from 'winston';
 import { DatabaseCLI } from "./database-cli";
+import { DictionaryCLI } from "./dictionary-cli";
 
 dotenv.config();
 
 export class DockerCLI extends BaseCLI {
   private readonly projectRoot: string;
-  private readonly PROJECT_NAME_TOLOWER: string = this.PROJECT_NAME.toLocaleLowerCase() ?? '';
+  private readonly PROJECT_NAME_TOLOWER: string = DictionaryCLI.get("PROJECT_NAME").toLocaleLowerCase() ?? '';
   private databaseCLI: DatabaseCLI;
 
   constructor(projectRoot: string) {
@@ -30,33 +31,33 @@ export class DockerCLI extends BaseCLI {
 
   private generateNodeBackendService(): string {
     return `
-  ${this.PROJECT_NAME_TOLOWER}-be:
+  ${DictionaryCLI.get("PROJECT_NAME")}-be:
     build:
-      context: ./${this.PROJECT_NAME}BE
+      context: ./${DictionaryCLI.get("PROJECT_NAME")}BE
     ports:
-      - "${this.BACKEND_PORT}:${this.BACKEND_PORT}"
+      - "${DictionaryCLI.get("BACKEND_PORT")}:${DictionaryCLI.get("BACKEND_PORT")}"
     volumes:
-      - "./${this.PROJECT_NAME}BE/node_modules:/app/node_modules"
-      - "./${this.PROJECT_NAME}BE:/app"
+      - "./${DictionaryCLI.get("PROJECT_NAME")}BE/node_modules:/app/node_modules"
+      - "./${DictionaryCLI.get("PROJECT_NAME")}BE:/app"
     networks:
-      - ${this.PROJECT_NAME_TOLOWER}-network
+      - ${DictionaryCLI.get("PROJECT_NAME")}-network
     restart: unless-stopped`;
   }
 
   private generateSpringBootBackendService(): string {
     return `
-  ${this.PROJECT_NAME_TOLOWER}-be:
+  ${DictionaryCLI.get("PROJECT_NAME")}-be:
     build:
-      context: ./${this.PROJECT_NAME}BE
+      context: ./${DictionaryCLI.get("PROJECT_NAME")}BE
       dockerfile: Dockerfile
     ports:
-      - "${this.BACKEND_PORT}:${this.BACKEND_PORT}"
+      - "${DictionaryCLI.get("BACKEND_PORT")}:${DictionaryCLI.get("BACKEND_PORT")}"
     volumes:
-      - "./${this.PROJECT_NAME}BE/target:/app/target"
-      - "./${this.PROJECT_NAME}BE/src:/app/src"
+      - "./${DictionaryCLI.get("PROJECT_NAME")}BE/target:/app/target"
+      - "./${DictionaryCLI.get("PROJECT_NAME")}BE/src:/app/src"
       - maven-cache:/root/.m2
     networks:
-      - ${this.PROJECT_NAME_TOLOWER}-network
+      - ${DictionaryCLI.get("PROJECT_NAME")}-network
     restart: unless-stopped
     environment:
       - SPRING_PROFILES_ACTIVE=dev`;
@@ -65,13 +66,13 @@ export class DockerCLI extends BaseCLI {
   private generateVolumes(): string {
     return `
 volumes:
-  ${this.PROJECT_NAME_TOLOWER}-db-data:`;
+  ${DictionaryCLI.get("PROJECT_NAME")}-db-data:`;
   }
 
   private generateNetwork(): string {
     return `
 networks:
-  ${this.PROJECT_NAME_TOLOWER}-network:
+  ${DictionaryCLI.get("PROJECT_NAME")}-network:
     driver: bridge`;
   }
 
@@ -146,7 +147,7 @@ COPY --from=build /app/target/app.jar app.jar
 RUN ls -la /app/
 
 # Expose port
-EXPOSE ${this.BACKEND_PORT}
+EXPOSE ${DictionaryCLI.get("BACKEND_PORT")}
 
 # Run the application
 ENTRYPOINT ["java", "-jar", "app.jar"]`;
@@ -175,7 +176,7 @@ ENTRYPOINT ["java", "-jar", "app.jar"]`;
   private writeDockerFile(): void {
     try {
       const isNode = process.env.BACKEND_TYPE === 'node'; // oppure usa una tua variabile di classe
-      const dockerFilePath = path.join(this.projectRoot + '/' + this.PROJECT_NAME + 'BE', 'Dockerfile');
+      const dockerFilePath = path.join(this.projectRoot + '/' + DictionaryCLI.get("PROJECT_NAME") + 'BE', 'Dockerfile');
 
       const dockerContent = isNode
         ? this.generateDockerFileNodeBE()

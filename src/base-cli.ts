@@ -1,9 +1,11 @@
-import { DictionaryCLI } from "./dictionary-cli"
+import * as dotenv from 'dotenv';
+
+dotenv.config();
 
 /**
  * Base class that all generators must extend
  */
-export class BaseCLI extends DictionaryCLI {
+export class BaseCLI {
     /**
      * Generate subproject
      */

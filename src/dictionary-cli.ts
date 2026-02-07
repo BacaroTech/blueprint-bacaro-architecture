@@ -1,32 +1,33 @@
 import logger from 'winston';
 
 /**
- * Class containing all loads from the env file
+ * Class containing all loads from the .env file
  */
 export class DictionaryCLI {
-    protected BACKEND_PORT!: string;
-    protected LOG_LEVEL!: string;
-    protected DATABASE_TYPE!: string;
-    protected DATABASE_PORT!: string;
-    protected DATABASE_USR!: string;
-    protected DATABASE_PASSWORD!: string;
-    protected DATABASE_NAME!: string;
-    protected DATABASE_HOST!: string;
-    protected DATABASE_URI!: string;
-    protected PROJECT_NAME!: string;
-    protected UI_LIBRARY!: string;
-    protected FRONTEND_PORT!: string;
-    protected ANGULAR_VERSION!: string;
-    protected PROJECT_DESCRIPTION!: string;
-    protected USER_PROFILE!: string;
-    protected HOME!: string;
-    protected BACKEND_TYPE!: string;
-    protected ENABLE_GENERATE_FRONTEND!: string;
-    protected ENABLE_GENERATE_BACKEND!: string;
-    protected ENABLE_GENERATE_DOCKER!: string;
-    protected ENABLE_GENERATE_README!: string;
+    protected static BACKEND_PORT: string;
+    protected static ENABLE_UI_LIBRARY: string;
+    protected static LOG_LEVEL: string;
+    protected static DATABASE_TYPE: string;
+    protected static DATABASE_PORT: string;
+    protected static DATABASE_USR: string;
+    protected static DATABASE_PASSWORD: string;
+    protected static DATABASE_NAME: string;
+    protected static DATABASE_HOST: string;
+    protected static DATABASE_URI: string;
+    protected static PROJECT_NAME: string;
+    protected static UI_LIBRARY: string;
+    protected static FRONTEND_PORT: string;
+    protected static ANGULAR_VERSION: string;
+    protected static PROJECT_DESCRIPTION: string;
+    protected static USER_PROFILE: string;
+    protected static HOME: string;
+    protected static BACKEND_TYPE: string;
+    protected static ENABLE_GENERATE_FRONTEND: string;
+    protected static ENABLE_GENERATE_BACKEND: string;
+    protected static ENABLE_GENERATE_DOCKER: string;
+    protected static ENABLE_GENERATE_README: string;
 
-    private static readonly REQUIRED_KEYS = [
+    private static readonly REQUIRED_KEYS: string[] = [
         'BACKEND_PORT',
         'LOG_LEVEL',
         'DATABASE_TYPE',
@@ -47,14 +48,30 @@ export class DictionaryCLI {
         'ENABLE_GENERATE_FRONTEND',
         'ENABLE_GENERATE_BACKEND',
         'ENABLE_GENERATE_DOCKER',
-        'ENABLE_GENERATE_README'
-    ] as const;
+        'ENABLE_GENERATE_README',
+        'ENABLE_UI_LIBRARY'
+    ];
 
-    constructor() {
+    private static initialized = false;
+
+    /**
+     * Initialize all environment variables
+     */
+    public static init(): void {
+        if (this.initialized) {
+            logger.warn('DictionaryCLI already initialized');
+            return;
+        }
+
         this.loadEnv();
+        this.initialized = true;
+        logger.info('DictionaryCLI initialized successfully');
     }
 
-    private loadEnv(): void {
+    /**
+     * Load all required environment variables
+     */
+    private static loadEnv(): void {
         for (const key of DictionaryCLI.REQUIRED_KEYS) {
             const value = this.env(key);
             (this as any)[key] = value;
@@ -64,14 +81,24 @@ export class DictionaryCLI {
     /**
      * Reads a REQUIRED env variable
      */
-    private env(key: string): string {
-        const value = process.env[key];
+    public static env(key: string): string {
+        const value: string | undefined = process.env[key];
 
         if (!value) {
             logger.error(`Missing required environment variable: ${key}`);
-            throw new Error();
+            throw new Error(`Missing required environment variable: ${key}`);
         }
 
         return value;
+    }
+
+    /**
+     * Get a specific environment variable value (after init)
+     */
+    public static get(key: string): string {
+        if (!this.initialized) {
+            DictionaryCLI.init();
+        }
+        return (this as any)[key];
     }
 }
