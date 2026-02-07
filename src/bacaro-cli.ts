@@ -14,7 +14,7 @@ dotenv.config();
 
 class BacaroCLI {
 
-  constructor(){
+  constructor() {
   }
 
   /**
@@ -33,7 +33,7 @@ class BacaroCLI {
    * Orchestrator of the cli
    */
   public main(): void {
-    
+
     program
       .version('1.0.0')
       .option('-n, --name <projectName>', 'Project name (overrides .env)')
@@ -47,7 +47,6 @@ class BacaroCLI {
 
         const projectNameFE: string = `${projectName}FE`;
         const projectNameBE: string = `${projectName}BE`;
-
         const projectRoot = path.join(this.getDesktopPath(), projectName);
 
         try {
@@ -59,48 +58,49 @@ class BacaroCLI {
           }
 
           // Creating project folders
-          fs.mkdirSync(projectRoot, { recursive: true });
-          const frontendPath = path.join(projectRoot, projectNameFE);
-          const backendPath = path.join(projectRoot, projectNameBE);
-          fs.mkdirSync(frontendPath, { recursive: true });
-          fs.mkdirSync(backendPath, { recursive: true });
+          fs.mkdirSync(projectRoot, { recursive: true });          
 
           logger.info("*********** SET PROJECT PATH *************");
           logger.info(`Creating project: ${projectName}`);
           logger.info(`Project Root: ${projectRoot}`);
-          logger.info(`Frontend Path: ${frontendPath}`);
-          logger.info(`Backend Path: ${backendPath}`);
 
           // Frontend generation
           logger.info("*********** Frontend generation *************");
-          const frontendCLI = new FrontendCLI(projectNameFE, projectRoot, frontendPath);
-          if(DictionaryCLI.get("ENABLE_GENERATE_FRONTEND") === 'true')
+          if (DictionaryCLI.get("ENABLE_GENERATE_FRONTEND") === 'true') {
+            const frontendPath = path.join(projectRoot, projectNameFE);
+            fs.mkdirSync(frontendPath, { recursive: true });
+            logger.info(`Frontend Path: ${frontendPath}`);
+            const frontendCLI = new FrontendCLI(projectNameFE, projectRoot, frontendPath);
             frontendCLI.generate();
-          else  
+          }
+          else
             logger.info(MessageCLI.messagePhaseSkip)
 
           // Backend generation
           logger.info("*********** Backend generation *************");
-          const backendCLI = new BackendCLI(projectNameBE, projectRoot, backendPath);
-          if(DictionaryCLI.get("ENABLE_GENERATE_BACKEND") === 'true')
+          if (DictionaryCLI.get("ENABLE_GENERATE_BACKEND") === 'true'){
+            const backendPath = path.join(projectRoot, projectNameBE);
+            fs.mkdirSync(backendPath, { recursive: true });
+            logger.info(`Backend Path: ${backendPath}`);
+            const backendCLI = new BackendCLI(projectNameBE, projectRoot, backendPath);
             backendCLI.generate();
-          else  
+          }else
             logger.info(MessageCLI.messagePhaseSkip)
 
           // Generate Docker-compose.yml + Database
           logger.info("*********** Generate Docker-compose.yml + Database *************");
           const dockerCLI = new DockerCLI(projectRoot);
-          if(DictionaryCLI.get("ENABLE_GENERATE_DOCKER") === 'true')
+          if (DictionaryCLI.get("ENABLE_GENERATE_DOCKER") === 'true')
             dockerCLI.generate();
-          else  
+          else
             logger.info(MessageCLI.messagePhaseSkip)
 
           // Generating README.md
           logger.info("*********** Generating README.md *************");
           const readMeCLI = new ReadMeCLI(projectRoot);
-          if(DictionaryCLI.get("ENABLE_GENERATE_README") === 'true')
+          if (DictionaryCLI.get("ENABLE_GENERATE_README") === 'true')
             readMeCLI.generate();
-          else  
+          else
             logger.info(MessageCLI.messagePhaseSkip)
 
           logger.info("*********** Setup completed *************");

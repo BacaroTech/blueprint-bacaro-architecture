@@ -9,14 +9,14 @@ The "blueprint-bacaro-architecture" project was born as a CLI developed to gener
 
 ## How to use it
 
-1. Compile
+1. Compile 
 ``` bash
 npx tsc
 ```
 
 2. Once compiled
 ``` bash
-npx tsc
+cd dist
 node bacaro-cli.js
 ```
 
