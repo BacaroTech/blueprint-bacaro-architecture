@@ -4,18 +4,17 @@ import fs from 'fs';
 import path from 'path';
 import logger from 'winston';
 import { BackendCLI } from "./backend-cli";
-import { DictionaryCLI } from "./dictionary-cli";
+import { DictionaryCLI } from "./utils/dictionary-cli";
 import { DockerCLI } from "./docker-cli";
 import { FrontendCLI } from "./fe/frontend-cli";
 import { ReadMeCLI } from "./readme-cli";
+import { MessageCLI } from './utils/message-cli';
 
 dotenv.config();
 
-class BacaroCLI extends DictionaryCLI {
-  private readonly messagePhaseSkip: string = 'Phase skipped by configuration';
+class BacaroCLI {
 
   constructor(){
-    super();
   }
 
   /**
@@ -78,7 +77,7 @@ class BacaroCLI extends DictionaryCLI {
           if(DictionaryCLI.get("ENABLE_GENERATE_FRONTEND") === 'true')
             frontendCLI.generate();
           else  
-            logger.info(this.messagePhaseSkip)
+            logger.info(MessageCLI.messagePhaseSkip)
 
           // Backend generation
           logger.info("*********** Backend generation *************");
@@ -86,7 +85,7 @@ class BacaroCLI extends DictionaryCLI {
           if(DictionaryCLI.get("ENABLE_GENERATE_BACKEND") === 'true')
             backendCLI.generate();
           else  
-            logger.info(this.messagePhaseSkip)
+            logger.info(MessageCLI.messagePhaseSkip)
 
           // Generate Docker-compose.yml + Database
           logger.info("*********** Generate Docker-compose.yml + Database *************");
@@ -94,7 +93,7 @@ class BacaroCLI extends DictionaryCLI {
           if(DictionaryCLI.get("ENABLE_GENERATE_DOCKER") === 'true')
             dockerCLI.generate();
           else  
-            logger.info(this.messagePhaseSkip)
+            logger.info(MessageCLI.messagePhaseSkip)
 
           // Generating README.md
           logger.info("*********** Generating README.md *************");
@@ -102,7 +101,7 @@ class BacaroCLI extends DictionaryCLI {
           if(DictionaryCLI.get("ENABLE_GENERATE_README") === 'true')
             readMeCLI.generate();
           else  
-            logger.info(this.messagePhaseSkip)
+            logger.info(MessageCLI.messagePhaseSkip)
 
           logger.info("*********** Setup completed *************");
           logger.info(`${projectName} setup completed!`);

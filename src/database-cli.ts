@@ -1,6 +1,6 @@
-import { BaseCLI } from "./base-cli";
+import { BaseCLI } from "./utils/base-cli";
 import dotenv from "dotenv";
-import { DictionaryCLI } from "./dictionary-cli";
+import { DictionaryCLI } from "./utils/dictionary-cli";
 
 dotenv.config();
 

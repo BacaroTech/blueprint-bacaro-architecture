@@ -1,9 +1,9 @@
-import { BaseCLI } from "./base-cli";
+import { BaseCLI } from "./utils/base-cli";
 import dotenv from "dotenv";
 import logger from 'winston';
 import { BackendSpringbootCLI } from "./backend-springboot-cli";
 import { BackendNodeCLI } from "./backend-node-cli";
-import { DictionaryCLI } from "./dictionary-cli";
+import { DictionaryCLI } from "./utils/dictionary-cli";
 
 dotenv.config();
 

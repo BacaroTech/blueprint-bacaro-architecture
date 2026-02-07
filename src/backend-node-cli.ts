@@ -1,11 +1,11 @@
-import { BaseCLI } from "./base-cli";
+import { BaseCLI } from "./utils/base-cli";
 import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import dotenv from "dotenv";
 import logger from 'winston';
 import { error } from "console";
-import { DictionaryCLI } from "./dictionary-cli";
+import { DictionaryCLI } from "./utils/dictionary-cli";
 
 dotenv.config();
 
