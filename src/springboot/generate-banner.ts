@@ -1,6 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 import logger from 'winston';
+import { DictionaryCLI } from '../utils/dictionary-cli';
 
 export class BannerGenerator {
     static generateBanner(backendPath: string, projectNameBE: string): void {
@@ -12,7 +13,7 @@ export class BannerGenerator {
       ____) | |    | | \\ \\ _| |_| |\\  | |__| | | |_) | |__| | |__| | | |   
      |_____/|_|    |_|  \\_\\_____|_| \\_|\\_____| |____/ \\____/ \\____/  |_|   
                                                                             
-     :: ${projectNameBE} :: Spring Boot :: (v3.2.0)
+     :: ${projectNameBE} :: Spring Boot :: ${DictionaryCLI.get('SPRINGBOOT_VERSION')}
     `;
     const resourcesPath = path.join(backendPath, 'src', 'main', 'resources');
     const bannerPath = path.join(resourcesPath, 'banner.txt');

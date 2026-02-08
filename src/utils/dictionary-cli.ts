@@ -29,7 +29,6 @@ export class DictionaryCLI {
     protected static SPRINGBOOT_VERSION: string;
     protected static JAVA_VERSION: string;
     protected static GROUP_ID: string;
-    protected static ARTIFACT_ID: string;
     protected static BE_VERSION: string;
 
     private static readonly REQUIRED_KEYS: string[] = [
@@ -58,7 +57,6 @@ export class DictionaryCLI {
         'SPRINGBOOT_VERSION',
         'JAVA_VERSION',
         'GROUP_ID',
-        'ARTIFACT_ID',
         'BE_VERSION'
     ];
 

@@ -11,25 +11,8 @@ dotenv.config();
 export class PomGenerator {
     
         static generatePomXml(backendPath: string, projectNameBE: string): void {
-    //         const isPostgres = DictionaryCLI.get('DATABASE_TYPE') === 'postgres';
-    //         const isMongo = DictionaryCLI.get('DATABASE_TYPE') === 'mongo'; 
     
-    //         const databaseDependencies = isPostgres ? `
-    //         <dependency>
-    //             <groupId>org.springframework.boot</groupId>
-    //             <artifactId>spring-boot-starter-data-jpa</artifactId>
-    //         </dependency>
-            
-    //         <dependency>
-    //             <groupId>org.postgresql</groupId>
-    //             <artifactId>postgresql</artifactId>
-    //             <scope>runtime</scope>
-    //         </dependency>` : isMongo ? `
-    //         <dependency>
-    //             <groupId>org.springframework.boot</groupId>
-    //             <artifactId>spring-boot-starter-data-mongodb</artifactId>
-    //         </dependency>` : '';
-    
+
     //         const pomContent = `<?xml version="1.0" encoding="UTF-8"?>
     // <project xmlns="http://maven.apache.org/POM/4.0.0"
     //          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -109,8 +92,6 @@ export class PomGenerator {
     //     </build>
     // </project>`.trim();
     
-            //const pomPath = path.join(backendPath, 'pom.xml');
-            //fs.writeFileSync(pomPath, pomContent);
 
             const doc = create({ version: '1.0', encoding: 'UTF-8' });
             const project = doc.ele('project', {
@@ -128,7 +109,7 @@ export class PomGenerator {
                 .ele('relativePath').up();
 
             project.ele('groupId').txt(DictionaryCLI.get('GROUP_ID'));
-            project.ele('artifactId').txt(DictionaryCLI.get('ARTIFACT_ID'));
+            project.ele('artifactId').txt(projectNameBE);
             project.ele('version').txt(DictionaryCLI.get('BE_VERSION'));
 
             project.ele('properties')
@@ -148,6 +129,30 @@ export class PomGenerator {
             testStarter.ele('groupId').txt('org.springframework.boot').up();
             testStarter.ele('artifactId').txt('spring-boot-starter-test').up();
             testStarter.ele('scope').txt('test').up();
+            
+
+            switch (DictionaryCLI.get('DATABASE_TYPE')) {
+                case 'postgres': {
+                    const jpa = deps.ele('dependency');
+                    jpa.ele('groupId').txt('org.springframework.boot').up();
+                    jpa.ele('artifactId').txt('spring-boot-starter-data-jpa').up();
+
+                    const postgres = deps.ele('dependency');
+                    postgres.ele('groupId').txt('org.postgresql').up();
+                    postgres.ele('artifactId').txt('postgresql').up();
+                    postgres.ele('scope').txt('runtime').up();
+                    break;
+                }
+                case 'mongo': {
+                    const mongo = deps.ele('dependency');
+                    mongo.ele('groupId').txt('org.springframework.boot').up();
+                    mongo.ele('artifactId').txt('spring-boot-starter-data-mongodb').up();
+                    break;
+                }
+                default:
+                    //no db
+                    break;
+            }
 
             const build = project.ele('build');
             const plugins = build.ele('plugins');
