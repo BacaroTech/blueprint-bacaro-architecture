@@ -26,6 +26,11 @@ export class DictionaryCLI {
     protected static ENABLE_GENERATE_BACKEND: string;
     protected static ENABLE_GENERATE_DOCKER: string;
     protected static ENABLE_GENERATE_README: string;
+    protected static SPRINGBOOT_VERSION: string;
+    protected static JAVA_VERSION: string;
+    protected static GROUP_ID: string;
+    protected static ARTIFACT_ID: string;
+    protected static BE_VERSION: string;
 
     private static readonly REQUIRED_KEYS: string[] = [
         'BACKEND_PORT',
@@ -49,7 +54,12 @@ export class DictionaryCLI {
         'ENABLE_GENERATE_BACKEND',
         'ENABLE_GENERATE_DOCKER',
         'ENABLE_GENERATE_README',
-        'ENABLE_UI_LIBRARY'
+        'ENABLE_UI_LIBRARY',
+        'SPRINGBOOT_VERSION',
+        'JAVA_VERSION',
+        'GROUP_ID',
+        'ARTIFACT_ID',
+        'BE_VERSION'
     ];
 
     private static initialized = false;

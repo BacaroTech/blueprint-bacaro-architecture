@@ -6,7 +6,8 @@
   "dependencies": {
     "commander": "^13.1.0",
     "dotenv": "^16.4.7",
-    "winston": "^2.4.6"
+    "winston": "^2.4.6",
+    "xmlbuilder2": "^4.0.3"
   },
   "scripts": {
     "build": "tsc && copy .env dist\\.env"
