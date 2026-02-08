@@ -11,38 +11,7 @@ dotenv.config();
 export class PomGenerator {
     
         static generatePomXml(backendPath: string, projectNameBE: string): void {
-    
 
-    //         const pomContent = `<?xml version="1.0" encoding="UTF-8"?>
-    // <project xmlns="http://maven.apache.org/POM/4.0.0"
-    //          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    //          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
-    //          https://maven.apache.org/xsd/maven-4.0.0.xsd">
-    //     <modelVersion>4.0.0</modelVersion>
-        
-    //     <parent>
-    //         <groupId>org.springframework.boot</groupId>
-    //         <artifactId>spring-boot-starter-parent</artifactId>
-    //         <version>3.2.0</version>
-    //         <relativePath/>
-    //     </parent>
-        
-    //     <groupId>com.example</groupId>
-    //     <artifactId>${projectNameBE}</artifactId>
-    //     <version>0.0.1-SNAPSHOT</version>
-    //     <name>${projectNameBE}</name>
-    //     <description>Spring Boot project for ${projectNameBE}</description>
-        
-    //     <properties>
-    //         <java.version>17</java.version>
-    //     </properties>
-        
-    //     <dependencies>
-    //         <dependency>
-    //             <groupId>org.springframework.boot</groupId>
-    //             <artifactId>spring-boot-starter-web</artifactId>
-    //         </dependency>
-    //         ${databaseDependencies}
             
     //         <dependency>
     //             <groupId>org.springframework.boot</groupId>
@@ -50,47 +19,10 @@ export class PomGenerator {
     //         </dependency>
             
     //         <dependency>
-    //             <groupId>org.springframework.boot</groupId>
-    //             <artifactId>spring-boot-starter-actuator</artifactId>
-    //         </dependency>
-            
-    //         <dependency>
     //             <groupId>org.springdoc</groupId>
     //             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
     //             <version>2.3.0</version>
     //         </dependency>
-            
-    //         <dependency>
-    //             <groupId>org.projectlombok</groupId>
-    //             <artifactId>lombok</artifactId>
-    //             <optional>true</optional>
-    //         </dependency>
-            
-    //         <dependency>
-    //             <groupId>org.springframework.boot</groupId>
-    //             <artifactId>spring-boot-starter-test</artifactId>
-    //             <scope>test</scope>
-    //         </dependency>
-    //     </dependencies>
-        
-    //     <build>
-    //         <finalName>app</finalName>
-    //         <plugins>
-    //             <plugin>
-    //                 <groupId>org.springframework.boot</groupId>
-    //                 <artifactId>spring-boot-maven-plugin</artifactId>
-    //                 <configuration>
-    //                     <excludes>
-    //                         <exclude>
-    //                             <groupId>org.projectlombok</groupId>
-    //                             <artifactId>lombok</artifactId>
-    //                         </exclude>
-    //                     </excludes>
-    //                 </configuration>
-    //             </plugin>
-    //         </plugins>
-    //     </build>
-    // </project>`.trim();
     
 
             const doc = create({ version: '1.0', encoding: 'UTF-8' });
@@ -152,6 +84,19 @@ export class PomGenerator {
                 default:
                     //no db
                     break;
+            }
+
+            if (DictionaryCLI.get('ENABLE_ACTUATOR') === 'true') {
+                const actuator = deps.ele('dependency');
+                    actuator.ele('groupId').txt('org.springframework.boot').up();
+                    actuator.ele('artifactId').txt('spring-boot-starter-actuator').up();
+            }
+
+            if (DictionaryCLI.get('ENABLE_LOMBOK') === 'true') {
+                const lombok = deps.ele('dependency');
+                    lombok.ele('groupId').txt('org.projectlombok').up();
+                    lombok.ele('artifactId').txt('lombok').up();
+                    lombok.ele('scope').txt('compile').up
             }
 
             const build = project.ele('build');

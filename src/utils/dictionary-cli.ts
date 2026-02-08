@@ -30,6 +30,8 @@ export class DictionaryCLI {
     protected static JAVA_VERSION: string;
     protected static GROUP_ID: string;
     protected static BE_VERSION: string;
+    protected static ENABLE_ACTUATOR: string;
+    protected static ENABLE_LOMBOK: string;
 
     private static readonly REQUIRED_KEYS: string[] = [
         'BACKEND_PORT',
@@ -57,7 +59,9 @@ export class DictionaryCLI {
         'SPRINGBOOT_VERSION',
         'JAVA_VERSION',
         'GROUP_ID',
-        'BE_VERSION'
+        'BE_VERSION',
+        'ENABLE_ACTUATOR',
+        'ENABLE_LOMBOK'
     ];
 
     private static initialized = false;
