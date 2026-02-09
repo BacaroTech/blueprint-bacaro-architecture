@@ -11,20 +11,6 @@ dotenv.config();
 export class PomGenerator {
     
         static generatePomXml(backendPath: string, projectNameBE: string): void {
-
-            
-    //         <dependency>
-    //             <groupId>org.springframework.boot</groupId>
-    //             <artifactId>spring-boot-starter-validation</artifactId>
-    //         </dependency>
-            
-    //         <dependency>
-    //             <groupId>org.springdoc</groupId>
-    //             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-    //             <version>2.3.0</version>
-    //         </dependency>
-    
-
             const doc = create({ version: '1.0', encoding: 'UTF-8' });
             const project = doc.ele('project', {
                 'xmlns': 'http://maven.apache.org/POM/4.0.0',
@@ -98,6 +84,20 @@ export class PomGenerator {
                     lombok.ele('artifactId').txt('lombok').up();
                     lombok.ele('scope').txt('compile').up
             }
+            
+            if (DictionaryCLI.get('ENABLE_VALIDATOR') === 'true') {
+                const validator = deps.ele('dependency');
+                    validator.ele('groupId').txt('org.springframework.boot').up();
+                    validator.ele('artifactId').txt('spring-boot-starter-validation').up();
+            }
+
+            if (DictionaryCLI.get('ENABLE_SWAGGER') === 'true') {
+                const swagger = deps.ele('dependency');
+                    swagger.ele('groupId').txt('org.springdoc').up();
+                    swagger.ele('artifactId').txt('springdoc-openapi-starter-webmvc-ui').up();
+                    swagger.ele('version').txt(DictionaryCLI.get('SWAGGER_VERSION')).up();
+            }
+            
 
             const build = project.ele('build');
             const plugins = build.ele('plugins');

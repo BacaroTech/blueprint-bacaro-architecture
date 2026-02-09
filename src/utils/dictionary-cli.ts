@@ -32,6 +32,9 @@ export class DictionaryCLI {
     protected static BE_VERSION: string;
     protected static ENABLE_ACTUATOR: string;
     protected static ENABLE_LOMBOK: string;
+    protected static ENABLE_VALIDATOR: string;
+    protected static ENABLE_SWAGGER: string;
+    protected static SWAGGER_VERSION: string;
 
     private static readonly REQUIRED_KEYS: string[] = [
         'BACKEND_PORT',
@@ -61,7 +64,10 @@ export class DictionaryCLI {
         'GROUP_ID',
         'BE_VERSION',
         'ENABLE_ACTUATOR',
-        'ENABLE_LOMBOK'
+        'ENABLE_LOMBOK',
+        'ENABLE_VALIDATOR',
+        'ENABLE_SWAGGER',
+        'SWAGGER_VERSION'
     ];
 
     private static initialized = false;
