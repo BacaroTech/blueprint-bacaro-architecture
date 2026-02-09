@@ -51,7 +51,9 @@ export class PropertiesGenerator {
     
     # Logging
     logging.level.root=INFO
-    logging.level.com.example.${projectNameBE.toLowerCase()}=DEBUG`.trim();
+    logging.level.com.example.${projectNameBE.toLowerCase()}=DEBUG
+    springdoc.swagger-ui.enabled=${DictionaryCLI.get('ENABLE_SWAGGER')}`.trim();
+    
     
             const resourcesPath = path.join(backendPath, 'src', 'main', 'resources');
             const propertiesPath = path.join(resourcesPath, 'application.properties');

@@ -4,7 +4,6 @@ import { BaseCLI } from '../utils/base-cli';
 import { FolderGenerator } from './generate-folder';
 import { MainGenerator } from './generate-main';
 import { GitIgnoreGenerator } from './generate-git-ignore';
-import { SwaggerGenerator } from './generate-swagger';
 import { BannerGenerator } from './generate-banner';
 import { DictionaryCLI } from '../utils/dictionary-cli';
 import { PomGenerator } from './generate-pom';
@@ -40,7 +39,6 @@ export class BackendSpringbootCLI extends BaseCLI {
             // Generate configuration files
             PomGenerator.generatePomXml(this.backendPath, this.projectNameBE);
             PropertiesGenerator.generateApplicationProperties(this.backendPath, this.projectNameBE);
-            //SwaggerGenerator.generateSwaggerConfig(this.backendPath, this.projectNameBE);
             MainGenerator.generateMainApplication(this.backendPath, this.projectNameBE);
             //SamplesGenerator.generateSampleFiles(this.backendPath, this.projectNameBE);
             GitIgnoreGenerator.generateGitignore(this.backendPath);
