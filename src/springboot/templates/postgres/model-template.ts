@@ -9,13 +9,14 @@ import jakarta.persistence.*;
 public class {{className}} {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private long id;
     
-    @Column(nullable = false, unique = true)
+    @Column(name = "username", nullable = false, unique = true)
     private String username;
     
-    @Column(nullable = false)
+    @Column(name = "email", nullable = false, unique = true)
     private String email;
     
+    @Column(name = "password", nullable = false)
     private String password;
 }`;

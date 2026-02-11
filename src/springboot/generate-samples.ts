@@ -2,68 +2,37 @@ import path from 'path';
 import fs from 'fs';
 import logger from 'winston';
 import { DictionaryCLI } from '../utils/dictionary-cli';
-import { MODEL_TEMPLATE } from './templates/model-template';
-import { REPOSITORY_TEMPLATE } from './templates/repository-template';
+import { MODEL_TEMPLATE } from './templates/postgres/model-template';
+import { REPOSITORY_TEMPLATE } from './templates/postgres/repository-template';
+import { MONGO_MODEL_TEMPLATE } from './templates/mongo/model-template';
+import { MONGO_REPOSITORY_TEMPLATE } from './templates/mongo/repository-template';
 
 export class SamplesGenerator {
     static generateSampleFiles(backendPath: string, projectNameBE: string): void {
         const packageName = `com.example.${projectNameBE.toLowerCase()}`;
         const javaPath = path.join(backendPath, 'src', 'main', 'java', 'com', 'example', projectNameBE.toLowerCase());
-        const isPostgres = DictionaryCLI.get('DATABASE_TYPE') === 'postgres';
-        const isMongo = DictionaryCLI.get('DATABASE_TYPE') === 'mongo';
 
-        if (isPostgres) {
-            // Model per PostgreSQL (JPA)
+        let idType;
 
-            this.generateSampleModel(backendPath, projectNameBE);
-            this.generateSampleRepository(backendPath, projectNameBE);
+        switch (DictionaryCLI.get('DATABASE_TYPE')) {
+            case 'postgres': {
+                this.generateSamplePostgresModel(backendPath, projectNameBE);
+                this.generateSamplePostgresRepository(backendPath, projectNameBE);
+                idType = 'long';
+            }
+            case 'mongo': {
+                this.generateMongoUserModel(backendPath, projectNameBE);
+                this.generateMongoUserRepository(backendPath, projectNameBE);
+                idType = 'String';
+            }
+            default:
+                //no db
+                break;
+        }
+            
 
-//         } else if (isMongo) {
-//             // Model per MongoDB
-//             const userModelContent = `package ${packageName}.model;
-
-// import org.springframework.data.annotation.Id;
-// import org.springframework.data.mongodb.core.mapping.Document;
-// import org.springframework.data.mongodb.core.index.Indexed;
-// import lombok.Data;
-// import lombok.NoArgsConstructor;
-// import lombok.AllArgsConstructor;
-
-// @Document(collection = "users")
-// @Data
-// @NoArgsConstructor
-// @AllArgsConstructor
-// public class User {
-//     @Id
-//     private String id;
-    
-//     @Indexed(unique = true)
-//     private String username;
-    
-//     private String email;
-    
-//     private String password;
-// }`;
-//             fs.writeFileSync(path.join(javaPath, 'model', 'User.java'), userModelContent);
-
-//             // Repository per MongoDB
-//             const userRepositoryContent = `package ${packageName}.repository;
-
-// import ${packageName}.model.User;
-// import org.springframework.data.mongodb.repository.MongoRepository;
-// import org.springframework.stereotype.Repository;
-// import java.util.Optional;
-
-// @Repository
-// public interface UserRepository extends MongoRepository<User, String> {
-//     Optional<User> findByUsername(String username);
-//     Optional<User> findByEmail(String email);
-// }`.trim();
-//             fs.writeFileSync(path.join(javaPath, 'repository', 'UserRepository.java'), userRepositoryContent);
-//         }
 
         // Service (uguale per entrambi i database, ma cambia il tipo ID)
-        const idType = isPostgres ? 'Long' : 'String';
         const userServiceContent = `package ${packageName}.service;
 
 import ${packageName}.model.User;
@@ -105,7 +74,6 @@ public class UserService {
         fs.writeFileSync(path.join(javaPath, 'service', 'UserService.java'), userServiceContent);
 
         // Controller (cambia il tipo del PathVariable)
-        const pathVariableType = isPostgres ? 'Long' : 'String';
         const userControllerContent = `package ${packageName}.controller;
 
 import ${packageName}.model.User;
@@ -129,7 +97,7 @@ public class UserController {
     }
     
     @GetMapping("/{id}")
-    public ResponseEntity<User> getUserById(@PathVariable ${pathVariableType} id) {
+    public ResponseEntity<User> getUserById(@PathVariable ${idType} id) {
         return userService.getUserById(id)
             .map(ResponseEntity::ok)
             .orElse(ResponseEntity.notFound().build());
@@ -141,7 +109,7 @@ public class UserController {
     }
     
     @PutMapping("/{id}")
-    public ResponseEntity<User> updateUser(@PathVariable ${pathVariableType} id, @RequestBody User user) {
+    public ResponseEntity<User> updateUser(@PathVariable ${idType} id, @RequestBody User user) {
         try {
             return ResponseEntity.ok(userService.updateUser(id, user));
         } catch (RuntimeException e) {
@@ -150,7 +118,7 @@ public class UserController {
     }
     
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteUser(@PathVariable ${pathVariableType} id) {
+    public ResponseEntity<Void> deleteUser(@PathVariable ${idType} id) {
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();
     }
@@ -159,9 +127,8 @@ public class UserController {
 
         logger.info('Created sample files (User model, repository, service, controller)');
     }
-}
 
-    static generateSampleModel(backendPath: string, projectNameBE: string): void {
+    static generateSamplePostgresModel(backendPath: string, projectNameBE: string): void {
         const isLombokEnabled = DictionaryCLI.get('ENABLE_LOMBOK') === 'true';
         
         const className = 'User';
@@ -181,17 +148,16 @@ public class UserController {
             .replace('{{tableName}}', tableName)
             .replace('{{className}}', className)
             .replace('{{lombokImports}}', lombokImports)
-            .replace('{{lombokAnnotations}}', lombokAnnotations)
+            .replace('{{lombokAnnotations}}', lombokAnnotations);
 
         const modelPath = path.join(backendPath, 'src', 'main', 'java', 'com', 'example', projectNameBE.toLowerCase(), 'model');
-        if (!fs.existsSync(modelPath)) fs.mkdirSync(modelPath, { recursive: true });
 
         fs.writeFileSync(path.join(modelPath, `${className}.java`), content.trim());
         
         logger.info(`Generated ${className}.java (Lombok: ${isLombokEnabled})`);
     }
 
-    static generateSampleRepository(backendPath: string, projectNameBE: string): void {
+    static generateSamplePostgresRepository(backendPath: string, projectNameBE: string): void {
         const className = 'User';
         const basePackage = `com.example.${projectNameBE.toLowerCase()}`;
 
@@ -201,13 +167,58 @@ public class UserController {
 
         const repoPath = path.join(backendPath, 'src', 'main', 'java', 'com', 'example', projectNameBE.toLowerCase(), 'repository');
 
-        if (!fs.existsSync(repoPath)) {
-            fs.mkdirSync(repoPath, { recursive: true });
-        }
-
         const finalFilePath = path.join(repoPath, `${className}Repository.java`);
         fs.writeFileSync(finalFilePath, content);
         
         logger.info(`Created ${className}Repository.java`);
+    }
+
+    static generateMongoUserModel(backendPath: string, projectNameBE: string): void {
+        const isLombokEnabled = DictionaryCLI.get('ENABLE_LOMBOK') === 'true';
+        const className = 'User';
+        const basePackage = `com.example.${projectNameBE.toLowerCase()}`;
+        const collectionName = 'users';
+
+        const lombokImports = isLombokEnabled 
+            ? "import lombok.Data;\nimport lombok.NoArgsConstructor;\nimport lombok.AllArgsConstructor;" 
+            : "";
+        
+        const lombokAnnotations = isLombokEnabled 
+            ? "@Data\n@NoArgsConstructor\n@AllArgsConstructor" 
+            : "";
+
+        const content = MONGO_MODEL_TEMPLATE
+            .replace(/{{packageName}}/g, basePackage)
+            .replace('{{className}}', className)
+            .replace('{{collectionName}}', collectionName)
+            .replace('{{lombokImports}}', lombokImports)
+            .replace('{{lombokAnnotations}}', lombokAnnotations);
+
+        const modelPath = path.join(backendPath, 'src', 'main', 'java', 'com', 'example', projectNameBE.toLowerCase(), 'model');
+        
+        fs.writeFileSync(path.join(modelPath, `${className}.java`), content.trim());
+        
+        logger.info(`Created MongoDB User Model (Lombok: ${isLombokEnabled})`);
+    }
+
+    static generateMongoUserRepository(backendPath: string, projectNameBE: string): void {
+        const className = 'User';
+        const basePackage = `com.example.${projectNameBE.toLowerCase()}`;
+
+        const content = MONGO_REPOSITORY_TEMPLATE
+            .replace(/{{packageName}}/g, basePackage)
+            .replace(/{{className}}/g, className);
+
+        const repoPath = path.join(
+            backendPath, 
+            'src', 'main', 'java', 'com', 'example', 
+            projectNameBE.toLowerCase(), 
+            'repository'
+        );
+
+        const finalFilePath = path.join(repoPath, `${className}Repository.java`);
+        fs.writeFileSync(finalFilePath, content.trim());
+        
+        logger.info(`Created MongoDB Repository: ${className}Repository.java`);
     }
 }
