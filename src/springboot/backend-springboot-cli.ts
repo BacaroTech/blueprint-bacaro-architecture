@@ -40,7 +40,7 @@ export class BackendSpringbootCLI extends BaseCLI {
             PomGenerator.generatePomXml(this.backendPath, this.projectNameBE);
             PropertiesGenerator.generateApplicationProperties(this.backendPath, this.projectNameBE);
             MainGenerator.generateMainApplication(this.backendPath, this.projectNameBE);
-            //SamplesGenerator.generateSampleFiles(this.backendPath, this.projectNameBE);
+            SamplesGenerator.generateSampleFiles(this.backendPath, this.projectNameBE);
             GitIgnoreGenerator.generateGitignore(this.backendPath);
             BannerGenerator.generateBanner(this.backendPath, this.projectNameBE);
             this.generateWrapper();
