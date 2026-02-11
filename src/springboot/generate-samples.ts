@@ -6,133 +6,45 @@ import { MODEL_TEMPLATE } from './templates/postgres/model-template';
 import { REPOSITORY_TEMPLATE } from './templates/postgres/repository-template';
 import { MONGO_MODEL_TEMPLATE } from './templates/mongo/model-template';
 import { MONGO_REPOSITORY_TEMPLATE } from './templates/mongo/repository-template';
+import { SERVICE_TEMPLATE } from './templates/service-template';
+import { CONTROLLER_TEMPLATE } from './templates/controller-template';
 
 export class SamplesGenerator {
     static generateSampleFiles(backendPath: string, projectNameBE: string): void {
         const packageName = `com.example.${projectNameBE.toLowerCase()}`;
         const javaPath = path.join(backendPath, 'src', 'main', 'java', 'com', 'example', projectNameBE.toLowerCase());
 
-        let idType;
+        let idType: string = '';
 
         switch (DictionaryCLI.get('DATABASE_TYPE')) {
             case 'postgres': {
-                this.generateSamplePostgresModel(backendPath, projectNameBE);
-                this.generateSamplePostgresRepository(backendPath, projectNameBE);
+                this.generateSamplePostgresModel(packageName, javaPath);
+                this.generateSamplePostgresRepository(packageName, javaPath);
                 idType = 'long';
+                break;
             }
             case 'mongo': {
-                this.generateMongoUserModel(backendPath, projectNameBE);
-                this.generateMongoUserRepository(backendPath, projectNameBE);
+                this.generateMongoUserModel(packageName, javaPath);
+                this.generateMongoUserRepository(packageName, javaPath);
                 idType = 'String';
+                break;
             }
             default:
                 //no db
                 break;
         }
-            
 
-
-        // Service (uguale per entrambi i database, ma cambia il tipo ID)
-        const userServiceContent = `package ${packageName}.service;
-
-import ${packageName}.model.User;
-import ${packageName}.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import java.util.List;
-import java.util.Optional;
-
-@Service
-public class UserService {
-    @Autowired
-    private UserRepository userRepository;
-    
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
-    }
-    
-    public Optional<User> getUserById(${idType} id) {
-        return userRepository.findById(id);
-    }
-    
-    public User createUser(User user) {
-        return userRepository.save(user);
-    }
-    
-    public User updateUser(${idType} id, User userDetails) {
-        User user = userRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("User not found"));
-        user.setUsername(userDetails.getUsername());
-        user.setEmail(userDetails.getEmail());
-        return userRepository.save(user);
-    }
-    
-    public void deleteUser(${idType} id) {
-        userRepository.deleteById(id);
-    }
-}`.trim();
-        fs.writeFileSync(path.join(javaPath, 'service', 'UserService.java'), userServiceContent);
-
-        // Controller (cambia il tipo del PathVariable)
-        const userControllerContent = `package ${packageName}.controller;
-
-import ${packageName}.model.User;
-import ${packageName}.service.UserService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-
-@RestController
-@RequestMapping("/api/users")
-@CrossOrigin(origins = "*")
-public class UserController {
-    @Autowired
-    private UserService userService;
-    
-    @GetMapping
-    public List<User> getAllUsers() {
-        return userService.getAllUsers();
-    }
-    
-    @GetMapping("/{id}")
-    public ResponseEntity<User> getUserById(@PathVariable ${idType} id) {
-        return userService.getUserById(id)
-            .map(ResponseEntity::ok)
-            .orElse(ResponseEntity.notFound().build());
-    }
-    
-    @PostMapping
-    public User createUser(@RequestBody User user) {
-        return userService.createUser(user);
-    }
-    
-    @PutMapping("/{id}")
-    public ResponseEntity<User> updateUser(@PathVariable ${idType} id, @RequestBody User user) {
-        try {
-            return ResponseEntity.ok(userService.updateUser(id, user));
-        } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
-        }
-    }
-    
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteUser(@PathVariable ${idType} id) {
-        userService.deleteUser(id);
-        return ResponseEntity.noContent().build();
-    }
-}`.trim();
-        fs.writeFileSync(path.join(javaPath, 'controller', 'UserController.java'), userControllerContent);
-
+        this.generateSampleService(idType, packageName, javaPath);
+        
+        this.generateSampleController(idType, packageName, javaPath);
+        
         logger.info('Created sample files (User model, repository, service, controller)');
     }
 
-    static generateSamplePostgresModel(backendPath: string, projectNameBE: string): void {
+    static generateSamplePostgresModel(packageName: string, javaPath: string): void {
         const isLombokEnabled = DictionaryCLI.get('ENABLE_LOMBOK') === 'true';
         
         const className = 'User';
-        const packageName = `com.example.${projectNameBE.toLowerCase()}.model`;
         const tableName = 'users';
 
         const lombokImports = isLombokEnabled 
@@ -150,22 +62,21 @@ public class UserController {
             .replace('{{lombokImports}}', lombokImports)
             .replace('{{lombokAnnotations}}', lombokAnnotations);
 
-        const modelPath = path.join(backendPath, 'src', 'main', 'java', 'com', 'example', projectNameBE.toLowerCase(), 'model');
+        const modelPath = path.join(javaPath, 'model');
 
         fs.writeFileSync(path.join(modelPath, `${className}.java`), content.trim());
         
         logger.info(`Generated ${className}.java (Lombok: ${isLombokEnabled})`);
     }
 
-    static generateSamplePostgresRepository(backendPath: string, projectNameBE: string): void {
+    static generateSamplePostgresRepository(packageName: string, javaPath: string): void {
         const className = 'User';
-        const basePackage = `com.example.${projectNameBE.toLowerCase()}`;
 
         const content = REPOSITORY_TEMPLATE
-            .replace(/{{packageName}}/g, basePackage)
+            .replace(/{{packageName}}/g, packageName)
             .replace(/{{className}}/g, className);
 
-        const repoPath = path.join(backendPath, 'src', 'main', 'java', 'com', 'example', projectNameBE.toLowerCase(), 'repository');
+        const repoPath = path.join(javaPath, 'repository');
 
         const finalFilePath = path.join(repoPath, `${className}Repository.java`);
         fs.writeFileSync(finalFilePath, content);
@@ -173,10 +84,9 @@ public class UserController {
         logger.info(`Created ${className}Repository.java`);
     }
 
-    static generateMongoUserModel(backendPath: string, projectNameBE: string): void {
+    static generateMongoUserModel(packageName: string, javaPath: string): void {
         const isLombokEnabled = DictionaryCLI.get('ENABLE_LOMBOK') === 'true';
         const className = 'User';
-        const basePackage = `com.example.${projectNameBE.toLowerCase()}`;
         const collectionName = 'users';
 
         const lombokImports = isLombokEnabled 
@@ -188,37 +98,57 @@ public class UserController {
             : "";
 
         const content = MONGO_MODEL_TEMPLATE
-            .replace(/{{packageName}}/g, basePackage)
+            .replace(/{{packageName}}/g, packageName)
             .replace('{{className}}', className)
             .replace('{{collectionName}}', collectionName)
             .replace('{{lombokImports}}', lombokImports)
             .replace('{{lombokAnnotations}}', lombokAnnotations);
 
-        const modelPath = path.join(backendPath, 'src', 'main', 'java', 'com', 'example', projectNameBE.toLowerCase(), 'model');
+        const modelPath = path.join(javaPath, 'model');
         
         fs.writeFileSync(path.join(modelPath, `${className}.java`), content.trim());
         
         logger.info(`Created MongoDB User Model (Lombok: ${isLombokEnabled})`);
     }
 
-    static generateMongoUserRepository(backendPath: string, projectNameBE: string): void {
+    static generateMongoUserRepository(packageName: string, javaPath: string): void {
         const className = 'User';
-        const basePackage = `com.example.${projectNameBE.toLowerCase()}`;
 
         const content = MONGO_REPOSITORY_TEMPLATE
-            .replace(/{{packageName}}/g, basePackage)
+            .replace(/{{packageName}}/g, packageName)
             .replace(/{{className}}/g, className);
 
-        const repoPath = path.join(
-            backendPath, 
-            'src', 'main', 'java', 'com', 'example', 
-            projectNameBE.toLowerCase(), 
-            'repository'
-        );
+        const repoPath = path.join(javaPath, 'repository');
 
         const finalFilePath = path.join(repoPath, `${className}Repository.java`);
         fs.writeFileSync(finalFilePath, content.trim());
         
         logger.info(`Created MongoDB Repository: ${className}Repository.java`);
+    }
+    
+    static generateSampleService(idType: string, packageName: string, javaPath: string): void {
+
+        const content = SERVICE_TEMPLATE
+            .replace(/{{packageName}}/g, packageName)
+            .replace(/{{idType}}/g, idType);
+
+        const servicePath = path.join(javaPath, 'service');
+
+        fs.writeFileSync(path.join(servicePath, 'UserService.java'), content.trim());
+        
+        logger.info(`Created UserService.java with ID type: ${idType}`);
+    }
+
+    static generateSampleController(idType: string, packageName: string, javaPath: string): void {
+
+        const content = CONTROLLER_TEMPLATE
+            .replace(/{{packageName}}/g, packageName)
+            .replace(/{{idType}}/g, idType);
+
+        const controllerPath = path.join(javaPath, 'controller');
+
+        fs.writeFileSync(path.join(controllerPath, 'UserController.java'), content.trim());
+        
+        logger.info(`Created UserController.java with @PathVariable type: ${idType}`);
     }
 }

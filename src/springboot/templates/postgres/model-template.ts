@@ -1,4 +1,4 @@
-export const MODEL_TEMPLATE = `package {{packageName}};
+export const MODEL_TEMPLATE = `package {{packageName}}.model;
 
 import jakarta.persistence.*;
 {{lombokImports}}
