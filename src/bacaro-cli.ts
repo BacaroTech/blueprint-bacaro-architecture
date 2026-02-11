@@ -6,7 +6,7 @@ import logger from 'winston';
 import { BackendCLI } from "./backend-cli";
 import { DictionaryCLI } from "./utils/dictionary-cli";
 import { DockerCLI } from "./docker-cli";
-import { FrontendCLI } from "./fe/frontend-cli";
+import { FrontendCLI } from "./angular/frontend-cli";
 import { ReadMeCLI } from "./readme-cli";
 import { MessageCLI } from './utils/message-cli';
 
@@ -106,8 +106,8 @@ class BacaroCLI {
           logger.info("*********** Setup completed *************");
           logger.info(`${projectName} setup completed!`);
         } catch (error: any) {
-          logger.error('Error during project setup:', error.message || error);
-          throw new Error();
+          logger.error('Error during project setup:\n', error);
+          process.exit(1);
         }
       });
 
