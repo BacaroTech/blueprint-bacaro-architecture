@@ -35,6 +35,7 @@ export class DictionaryCLI {
     protected static ENABLE_VALIDATOR: string;
     protected static ENABLE_SWAGGER: string;
     protected static SWAGGER_VERSION: string;
+    protected static ENABLE_SAMPLES: string;
 
     private static readonly REQUIRED_KEYS: string[] = [
         'BACKEND_PORT',
@@ -67,7 +68,8 @@ export class DictionaryCLI {
         'ENABLE_LOMBOK',
         'ENABLE_VALIDATOR',
         'ENABLE_SWAGGER',
-        'SWAGGER_VERSION'
+        'SWAGGER_VERSION',
+        'ENABLE_SAMPLES'
     ];
 
     private static initialized = false;
