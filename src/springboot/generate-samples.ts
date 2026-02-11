@@ -176,7 +176,7 @@ public class UserController {
             ? "@Data\n@NoArgsConstructor\n@AllArgsConstructor" 
             : "";
 
-        let content = MODEL_TEMPLATE
+        const content = MODEL_TEMPLATE
             .replace('{{packageName}}', packageName)
             .replace('{{tableName}}', tableName)
             .replace('{{className}}', className)
